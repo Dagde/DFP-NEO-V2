@@ -20780,6 +20780,13 @@ const PlatformConfigurationSettings = ({
   const configModules = Array.isArray(config.modules) ? config.modules : [];
   const configLicenses = Array.isArray(config.licenses) ? config.licenses : [];
   const configPlatformUsers = Array.isArray(config.platformUsers) ? config.platformUsers : [];
+  const getPrimaryOrganisationSettingsFromConfig = (sourceConfig = draftConfigRef.current) => {
+    const organisations = Array.isArray(sourceConfig.organisations) ? sourceConfig.organisations : [];
+    if (organisations.length === 0) return {};
+    const activeIndex = organisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
+    const organisation = organisations[activeIndex >= 0 ? activeIndex : 0] || organisations[0];
+    return organisation?.settings || {};
+  };
   const activeSettingsUnitCode = String(
     Array.isArray(activeUnitCodes) && activeUnitCodes[0] || (String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0] : activeUnitCode) || configUnits.find(isActiveRecord)?.code || configUnits[0]?.code || ""
   ).trim().toUpperCase();
@@ -21955,20 +21962,30 @@ This permanently removes the organisation record from platform configuration and
     }));
     recordStep19SettingsTrace("field:update-sct:queued", { changes });
   };
-  const updateCrewPositionTerminology = (positions, renamedPosition, deletedDefaultIds = crewPositionTerminology.deletedDefaultIds || []) => {
-    recordStep19SettingsTrace("field:update-crew-positions:start", {
-      changedPositionCount: positions.length,
-      renamedPosition,
-      deletedDefaultIds
-    });
+  const updateCrewPositionTerminology = (positionsOrUpdater, renamedPosition, deletedDefaultIds) => {
     setRankTerminologyDirty(true);
     const previousConfig = draftConfigRef.current;
     const previousUnits = Array.isArray(previousConfig.units) ? previousConfig.units : [];
     const targetIndex = previousUnits.findIndex((unit) => String(unit.code || "").trim().toUpperCase() === activeSettingsUnitCode);
     if (targetIndex < 0) return;
-    const nextTerminology = normaliseCrewPositionTerminology({ positions, deletedDefaultIds });
-    const from = String(renamedPosition?.from || "").trim();
-    const to = String(renamedPosition?.to || "").trim();
+    const targetUnit = previousUnits[targetIndex];
+    const targetSettings = targetUnit?.settings || {};
+    const currentTerminology = normaliseCrewPositionTerminology(
+      targetSettings.crewPositionTerminology || getPrimaryOrganisationSettingsFromConfig(previousConfig).crewPositionTerminology || null
+    );
+    const updateResult = typeof positionsOrUpdater === "function" ? positionsOrUpdater(currentTerminology) : { positions: positionsOrUpdater, renamedPosition, deletedDefaultIds };
+    if (!updateResult) return;
+    const positions = updateResult.positions;
+    const nextDeletedDefaultIds = updateResult.deletedDefaultIds ?? deletedDefaultIds ?? currentTerminology.deletedDefaultIds ?? [];
+    const nextRenamedPosition = updateResult.renamedPosition ?? renamedPosition;
+    recordStep19SettingsTrace("field:update-crew-positions:start", {
+      changedPositionCount: positions.length,
+      renamedPosition: nextRenamedPosition,
+      deletedDefaultIds: nextDeletedDefaultIds
+    });
+    const nextTerminology = normaliseCrewPositionTerminology({ positions, deletedDefaultIds: nextDeletedDefaultIds });
+    const from = String(nextRenamedPosition?.from || "").trim();
+    const to = String(nextRenamedPosition?.to || "").trim();
     const shouldRenameSeats = Boolean(from && to && from.toUpperCase() !== to.toUpperCase());
     const nextConfig = {
       ...previousConfig,
@@ -21997,58 +22014,85 @@ This permanently removes the organisation record from platform configuration and
     setConfig(nextConfig);
     recordStep19SettingsTrace("field:update-crew-positions:queued", {
       changedPositionCount: positions.length,
-      renamedPosition,
-      deletedDefaultIds
+      renamedPosition: nextRenamedPosition,
+      deletedDefaultIds: nextDeletedDefaultIds
     });
   };
   const updateCrewPositionEntry = (entryId, changes) => {
-    const currentEntry = crewPositionTerminology.positions.find((entry) => entry.id === entryId);
-    if (!currentEntry) return;
-    const nextGenericName = changes.genericName !== void 0 ? String(changes.genericName) : currentEntry.genericName;
-    const nextLabel = changes.label !== void 0 ? String(changes.label) : currentEntry.label;
-    const nextPositions = crewPositionTerminology.positions.map((entry) => entry.id === entryId ? { ...entry, ...changes, genericName: nextGenericName, label: nextLabel } : entry);
-    updateCrewPositionTerminology(nextPositions, { from: currentEntry.genericName, to: nextGenericName });
+    updateCrewPositionTerminology((currentTerminology) => {
+      const currentEntry = currentTerminology.positions.find((entry) => entry.id === entryId);
+      if (!currentEntry) return null;
+      const nextGenericName = changes.genericName !== void 0 ? String(changes.genericName) : currentEntry.genericName;
+      const nextLabel = changes.label !== void 0 ? String(changes.label) : currentEntry.label;
+      return {
+        positions: currentTerminology.positions.map((entry) => entry.id === entryId ? { ...entry, ...changes, genericName: nextGenericName, label: nextLabel } : entry),
+        renamedPosition: { from: currentEntry.genericName, to: nextGenericName },
+        deletedDefaultIds: currentTerminology.deletedDefaultIds || []
+      };
+    });
   };
   const addCrewPositionEntry = () => {
-    const genericName = `Crew Position ${crewPositionTerminology.positions.length + 1}`;
-    updateCrewPositionTerminology([
-      ...crewPositionTerminology.positions,
-      {
-        id: createClientRecordId("crew-position"),
-        genericName,
-        label: genericName,
-        operationalModels: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)
-      }
-    ]);
+    updateCrewPositionTerminology((currentTerminology) => {
+      const genericName = `Crew Position ${currentTerminology.positions.length + 1}`;
+      return {
+        positions: [
+          ...currentTerminology.positions,
+          {
+            id: createClientRecordId("crew-position"),
+            genericName,
+            label: genericName,
+            operationalModels: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)
+          }
+        ],
+        deletedDefaultIds: currentTerminology.deletedDefaultIds || []
+      };
+    });
   };
   const removeCrewPositionEntry = (entryId) => {
-    const nextPositions = crewPositionTerminology.positions.filter((entry) => entry.id !== entryId);
-    if (nextPositions.length === crewPositionTerminology.positions.length || nextPositions.length === 0) return;
-    const nextDeletedDefaultIds = defaultCrewPositionIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...crewPositionTerminology.deletedDefaultIds || [], entryId])) : crewPositionTerminology.deletedDefaultIds || [];
-    updateCrewPositionTerminology(nextPositions, void 0, nextDeletedDefaultIds);
+    updateCrewPositionTerminology((currentTerminology) => {
+      const nextPositions = currentTerminology.positions.filter((entry) => entry.id !== entryId);
+      if (nextPositions.length === currentTerminology.positions.length || nextPositions.length === 0) return null;
+      const nextDeletedDefaultIds = defaultCrewPositionIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...currentTerminology.deletedDefaultIds || [], entryId])) : currentTerminology.deletedDefaultIds || [];
+      return {
+        positions: nextPositions,
+        deletedDefaultIds: nextDeletedDefaultIds
+      };
+    });
   };
   const defaultStaffQualificationIds = new Set(DEFAULT_STAFF_QUALIFICATIONS.qualifications.map((entry) => entry.id));
-  const updateStaffQualificationCatalogue = (qualifications, deletedDefaultIds = staffQualificationCatalogue.deletedDefaultIds || []) => {
-    recordStep19SettingsTrace("field:update-staff-qualifications:start", {
-      qualificationCount: qualifications.length,
-      qualifications: qualifications.map((entry) => ({
-        id: entry.id,
-        name: entry.name,
-        code: entry.code,
-        roleRestrictions: entry.roleRestrictions,
-        operationalModels: entry.operationalModels,
-        status: entry.status
-      })),
-      deletedDefaultIds
-    });
+  const updateStaffQualificationCatalogue = (qualificationsOrUpdater, deletedDefaultIds) => {
     setRankTerminologyDirty(true);
-    updateActiveUnitSettings((settings) => ({
-      ...settings,
-      staffQualificationCatalogue: normaliseStaffQualificationCatalogue({ qualifications, deletedDefaultIds })
-    }));
-    recordStep19SettingsTrace("field:update-staff-qualifications:queued", {
-      qualificationCount: qualifications.length,
-      deletedDefaultIds
+    updateActiveUnitSettings((settings) => {
+      const currentCatalogue = normaliseStaffQualificationCatalogue(
+        settings.staffQualificationCatalogue || getPrimaryOrganisationSettingsFromConfig().staffQualificationCatalogue || null
+      );
+      const updateResult = typeof qualificationsOrUpdater === "function" ? qualificationsOrUpdater(currentCatalogue) : { qualifications: qualificationsOrUpdater, deletedDefaultIds };
+      if (!updateResult) return settings;
+      const qualifications = updateResult.qualifications;
+      const nextDeletedDefaultIds = updateResult.deletedDefaultIds ?? deletedDefaultIds ?? currentCatalogue.deletedDefaultIds ?? [];
+      recordStep19SettingsTrace("field:update-staff-qualifications:start", {
+        qualificationCount: qualifications.length,
+        qualifications: qualifications.map((entry) => ({
+          id: entry.id,
+          name: entry.name,
+          code: entry.code,
+          roleRestrictions: entry.roleRestrictions,
+          operationalModels: entry.operationalModels,
+          status: entry.status
+        })),
+        deletedDefaultIds: nextDeletedDefaultIds
+      });
+      recordStep19SettingsTrace("field:update-staff-qualifications:queued", {
+        qualificationCount: qualifications.length,
+        deletedDefaultIds: nextDeletedDefaultIds
+      });
+      return {
+        ...settings,
+        staffQualificationCatalogue: normaliseStaffQualificationCatalogue({
+          qualifications,
+          deletedDefaultIds: nextDeletedDefaultIds
+        })
+      };
     });
   };
   const focusLinkedInstructorQualification = () => {
@@ -22064,76 +22108,113 @@ This permanently removes the organisation record from platform configuration and
     }, 350);
   };
   const updateStaffQualificationEntry = (entryId, changes) => {
-    const nextQualifications = staffQualificationCatalogue.qualifications.map((entry) => entry.id === entryId ? { ...entry, ...changes } : entry);
-    updateStaffQualificationCatalogue(nextQualifications);
+    updateStaffQualificationCatalogue((currentCatalogue) => ({
+      qualifications: currentCatalogue.qualifications.map((entry) => entry.id === entryId ? { ...entry, ...changes } : entry),
+      deletedDefaultIds: currentCatalogue.deletedDefaultIds || []
+    }));
   };
   const addStaffQualificationEntry = () => {
-    const name = `Qualification ${staffQualificationCatalogue.qualifications.length + 1}`;
-    updateStaffQualificationCatalogue([
-      ...staffQualificationCatalogue.qualifications,
-      {
-        id: createClientRecordId("staff-qualification"),
-        name,
-        code: name,
-        operationalModels: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value),
-        roleRestrictions: [],
-        status: "ACTIVE"
-      }
-    ]);
+    updateStaffQualificationCatalogue((currentCatalogue) => {
+      const name = `Qualification ${currentCatalogue.qualifications.length + 1}`;
+      return {
+        qualifications: [
+          ...currentCatalogue.qualifications,
+          {
+            id: createClientRecordId("staff-qualification"),
+            name,
+            code: name,
+            operationalModels: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value),
+            roleRestrictions: [],
+            status: "ACTIVE"
+          }
+        ],
+        deletedDefaultIds: currentCatalogue.deletedDefaultIds || []
+      };
+    });
   };
   const removeStaffQualificationEntry = (entryId) => {
-    const nextQualifications = staffQualificationCatalogue.qualifications.filter((entry) => entry.id !== entryId);
-    if (nextQualifications.length === staffQualificationCatalogue.qualifications.length) return;
-    const nextDeletedDefaultIds = defaultStaffQualificationIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...staffQualificationCatalogue.deletedDefaultIds || [], entryId])) : staffQualificationCatalogue.deletedDefaultIds || [];
-    updateStaffQualificationCatalogue(nextQualifications, nextDeletedDefaultIds);
+    updateStaffQualificationCatalogue((currentCatalogue) => {
+      const nextQualifications = currentCatalogue.qualifications.filter((entry) => entry.id !== entryId);
+      if (nextQualifications.length === currentCatalogue.qualifications.length) return null;
+      const nextDeletedDefaultIds = defaultStaffQualificationIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...currentCatalogue.deletedDefaultIds || [], entryId])) : currentCatalogue.deletedDefaultIds || [];
+      return {
+        qualifications: nextQualifications,
+        deletedDefaultIds: nextDeletedDefaultIds
+      };
+    });
   };
-  const updateUnitCallsignSettings = (entries, policies = unitCallsignSettings.policies) => {
-    recordStep19SettingsTrace("field:update-unit-callsigns:start", { entries, policies });
+  const updateUnitCallsignSettings = (entriesOrUpdater, policies) => {
     setRankTerminologyDirty(true);
-    updateActiveUnitSettings((settings) => ({
-      ...settings,
-      unitCallsignSettings: normaliseUnitCallsignSettings({ entries, policies })
-    }));
-    recordStep19SettingsTrace("field:update-unit-callsigns:queued", { entryCount: entries.length, policyCount: policies.length });
+    updateActiveUnitSettings((settings) => {
+      const currentSettings = normaliseUnitCallsignSettings(
+        settings.unitCallsignSettings || getPrimaryOrganisationSettingsFromConfig().unitCallsignSettings || null
+      );
+      const updateResult = typeof entriesOrUpdater === "function" ? entriesOrUpdater(currentSettings) : { entries: entriesOrUpdater, policies: currentSettings.policies };
+      if (!updateResult) return settings;
+      const entries = updateResult.entries ?? currentSettings.entries;
+      const nextPolicies = updateResult.policies ?? policies ?? currentSettings.policies;
+      recordStep19SettingsTrace("field:update-unit-callsigns:start", { entries, policies: nextPolicies });
+      recordStep19SettingsTrace("field:update-unit-callsigns:queued", { entryCount: entries.length, policyCount: nextPolicies.length });
+      return {
+        ...settings,
+        unitCallsignSettings: normaliseUnitCallsignSettings({ entries, policies: nextPolicies })
+      };
+    });
   };
   const updateUnitCallsignEntry = (entryId, changes) => {
-    updateUnitCallsignSettings(unitCallsignSettings.entries.map((entry) => entry.id === entryId ? { ...entry, ...changes } : entry));
+    updateUnitCallsignSettings((currentSettings) => ({
+      entries: currentSettings.entries.map((entry) => entry.id === entryId ? { ...entry, ...changes } : entry),
+      policies: currentSettings.policies
+    }));
   };
   const addUnitCallsignEntry = () => {
     const defaultUnit = visibleCallsignUnitOptions[0] || visibleUnitOptions[0] || config.units.find(isActiveRecord)?.code || config.units[0]?.code || "";
-    updateUnitCallsignSettings([
-      ...unitCallsignSettings.entries,
-      {
-        id: createClientRecordId("unit-callsign"),
-        unitCode: String(defaultUnit || "").trim().toUpperCase(),
-        callsign: `Callsign ${unitCallsignSettings.entries.length + 1}`,
-        isDefault: !unitCallsignSettings.entries.some((entry) => entry.unitCode === String(defaultUnit || "").trim().toUpperCase())
-      }
-    ]);
+    updateUnitCallsignSettings((currentSettings) => ({
+      entries: [
+        ...currentSettings.entries,
+        {
+          id: createClientRecordId("unit-callsign"),
+          unitCode: String(defaultUnit || "").trim().toUpperCase(),
+          callsign: `Callsign ${currentSettings.entries.length + 1}`,
+          isDefault: !currentSettings.entries.some((entry) => entry.unitCode === String(defaultUnit || "").trim().toUpperCase())
+        }
+      ],
+      policies: currentSettings.policies
+    }));
   };
   const removeUnitCallsignEntry = (entryId) => {
-    updateUnitCallsignSettings(unitCallsignSettings.entries.filter((entry) => entry.id !== entryId));
+    updateUnitCallsignSettings((currentSettings) => ({
+      entries: currentSettings.entries.filter((entry) => entry.id !== entryId),
+      policies: currentSettings.policies
+    }));
   };
   const setDefaultUnitCallsignEntry = (entryId) => {
-    const selected = unitCallsignSettings.entries.find((entry) => entry.id === entryId);
-    if (!selected) return;
-    updateUnitCallsignSettings(unitCallsignSettings.entries.map((entry) => ({
-      ...entry,
-      isDefault: entry.unitCode === selected.unitCode ? entry.id === entryId : entry.isDefault
-    })));
+    updateUnitCallsignSettings((currentSettings) => {
+      const selected = currentSettings.entries.find((entry) => entry.id === entryId);
+      if (!selected) return null;
+      return {
+        entries: currentSettings.entries.map((entry) => ({
+          ...entry,
+          isDefault: entry.unitCode === selected.unitCode ? entry.id === entryId : entry.isDefault
+        })),
+        policies: currentSettings.policies
+      };
+    });
   };
   const updateUnitCallsignPolicy = (unitCode, changes) => {
     const nextUnitCode = String(unitCode || "").trim().toUpperCase();
     if (!nextUnitCode) return;
-    const currentPolicy = getUnitCallsignPolicy(unitCallsignSettings, nextUnitCode);
-    const nextPolicy = { ...currentPolicy, ...changes, unitCode: nextUnitCode };
-    updateUnitCallsignSettings(
-      unitCallsignSettings.entries,
-      [
-        ...unitCallsignSettings.policies.filter((policy) => policy.unitCode !== nextUnitCode),
-        nextPolicy
-      ]
-    );
+    updateUnitCallsignSettings((currentSettings) => {
+      const currentPolicy = getUnitCallsignPolicy(currentSettings, nextUnitCode);
+      const nextPolicy = { ...currentPolicy, ...changes, unitCode: nextUnitCode };
+      return {
+        entries: currentSettings.entries,
+        policies: [
+          ...currentSettings.policies.filter((policy) => policy.unitCode !== nextUnitCode),
+          nextPolicy
+        ]
+      };
+    });
   };
   const updateCrewCompositionSettings = (alternateCompositions, currencyProfiles = crewCompositionSettings.currencyProfiles) => {
     updatePrimaryOrganisationSettings((settings) => ({
@@ -25219,23 +25300,38 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     }
     return saved;
   };
+  const saveResourcePoolsAndExitEditRef = reactExports.useRef(saveResourcePoolsAndExitEdit);
+  const saveSectionAndExitEditRef = reactExports.useRef(saveSectionAndExitEdit);
+  reactExports.useEffect(() => {
+    saveResourcePoolsAndExitEditRef.current = saveResourcePoolsAndExitEdit;
+    saveSectionAndExitEditRef.current = saveSectionAndExitEdit;
+  });
   reactExports.useEffect(() => {
     if (!wizardEditMode || !onWizardSaveReady) return void 0;
+    let saveHandler = null;
     if (scrollTarget === "platform-dfp-resource-rows" || scrollTarget === "platform-aircraft-setup") {
-      onWizardSaveReady(saveResourcePoolsAndExitEdit);
-      return () => onWizardSaveReady(null);
+      saveHandler = () => saveResourcePoolsAndExitEditRef.current();
+    } else if (scrollTarget === "platform-standard-missions") {
+      saveHandler = () => saveSectionAndExitEditRef.current("platform-standard-missions");
+    } else if (scrollTarget) {
+      const sectionToSave = scrollTarget;
+      saveHandler = () => saveSectionAndExitEditRef.current(sectionToSave);
     }
-    if (scrollTarget === "platform-standard-missions") {
-      onWizardSaveReady(() => saveSectionAndExitEdit("platform-standard-missions"));
-      return () => onWizardSaveReady(null);
-    }
-    if (scrollTarget) {
-      onWizardSaveReady(() => saveSectionAndExitEdit(scrollTarget));
-      return () => onWizardSaveReady(null);
+    if (saveHandler) {
+      onWizardSaveReady(saveHandler);
+      if (scrollTarget === "platform-rank-terminology") {
+        recordStep19SettingsTrace("wizard-save-callback:registered", { scrollTarget });
+      }
+      return () => {
+        if (scrollTarget === "platform-rank-terminology") {
+          recordStep19SettingsTrace("wizard-save-callback:cleared", { scrollTarget });
+        }
+        onWizardSaveReady(null);
+      };
     }
     onWizardSaveReady(null);
     return () => onWizardSaveReady(null);
-  }, [onWizardSaveReady, saveResourcePoolsAndExitEdit, saveSectionAndExitEdit, scrollTarget, wizardEditMode]);
+  }, [onWizardSaveReady, scrollTarget, wizardEditMode]);
   const renderSectionEditSaveButton = (sectionId) => {
     if (!canEdit || !canEditSectionPermission(sectionId)) return null;
     if (wizardEditMode) return null;
