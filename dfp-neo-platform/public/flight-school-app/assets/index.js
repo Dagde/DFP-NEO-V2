@@ -20438,6 +20438,7 @@ const downloadTextFile = (filename, content, mimeType) => {
   URL.revokeObjectURL(url);
 };
 const getTraceNow = () => typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+const STEP_19_SETTINGS_TRACE_STORAGE_KEY = "dfp_step_19_settings_trace";
 const TRAINING_REPORT_OVERVIEW_FIELD_INFO = {
   event: "The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as a lesson code, task code or sortie number.",
   training: "The label for the training stream that owns the event. Depending on the operational model, this may be a course, LMP, package, task stream or assigned training sequence.",
@@ -20616,6 +20617,14 @@ const PlatformConfigurationSettings = ({
       loadedConfigRef.current = nextConfig;
       draftConfigRef.current = nextConfig;
       setConfig(nextConfig);
+      if (wizardEditMode && scrollTarget === "platform-rank-terminology") {
+        appendSettingsTraceEntry({
+          stage: "external-config-updated-event",
+          atIso: (/* @__PURE__ */ new Date()).toISOString(),
+          atMs: Number(getTraceNow().toFixed(2)),
+          details: { activeSettingsUnitCode }
+        });
+      }
     };
     window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
     return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
@@ -20712,6 +20721,19 @@ const PlatformConfigurationSettings = ({
     const events = settingsTraceRef.current.events;
     events.push(traceEvent);
     if (events.length > 120) events.splice(0, events.length - 120);
+  };
+  const appendSettingsTraceEntry = (entry) => {
+    const events = settingsTraceRef.current.events;
+    events.push(entry);
+    if (events.length > 160) events.splice(0, events.length - 160);
+    if (typeof window === "undefined") return;
+    try {
+      const existing = JSON.parse(window.localStorage.getItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY) || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-220);
+      window.localStorage.setItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY, JSON.stringify(next, null, 2));
+      window.dfpStep19SettingsTrace = next;
+    } catch {
+    }
   };
   reactExports.useEffect(() => {
     const now = getTraceNow();
@@ -21225,6 +21247,12 @@ const PlatformConfigurationSettings = ({
     });
   };
   const commitWizardPlaceholderField = (key, commit) => (value) => {
+    recordStep19SettingsTrace("field:commit-placeholder", {
+      key,
+      value,
+      valueLength: String(value || "").length,
+      trimmedLength: String(value || "").trim().length
+    });
     if (String(value || "").trim()) markWizardPlaceholderEdited(key);
     commit(value);
   };
@@ -21244,6 +21272,79 @@ const PlatformConfigurationSettings = ({
   const unitCallsignSettings = normaliseUnitCallsignSettings(
     activeSettingsUnitSettings.unitCallsignSettings || primaryOrganisationSettings.unitCallsignSettings || null
   );
+  const getStep19UnitSettingsSnapshot = (sourceConfig = draftConfigRef.current) => {
+    const sourceUnits = Array.isArray(sourceConfig.units) ? sourceConfig.units : [];
+    const unit = sourceUnits.find((candidate) => String(candidate.code || "").trim().toUpperCase() === activeSettingsUnitCode);
+    const settings = unit?.settings || {};
+    const qualificationCatalogue = normaliseStaffQualificationCatalogue(settings.staffQualificationCatalogue || null);
+    const crewTerminology = normaliseCrewPositionTerminology(settings.crewPositionTerminology || null);
+    const callsignSettings = normaliseUnitCallsignSettings(settings.unitCallsignSettings || null);
+    return {
+      activeSettingsUnitCode,
+      activeUnitCode,
+      activeUnitCodes,
+      scrollTarget,
+      wizardEditMode,
+      hasUnit: Boolean(unit),
+      unitCode: unit?.code || null,
+      unitName: unit?.name || null,
+      personnelDisplaySettings: normalisePersonnelDisplaySettings(settings.personnelDisplaySettings || settings.personnelSettings || null),
+      trainingReportTerminology: normaliseTrainingReportTerminology(settings.trainingReportTerminology || null),
+      sctTerminology: normaliseSctTerminology(settings.sctTerminology || null),
+      crewPositions: crewTerminology.positions.map((entry) => ({
+        id: entry.id,
+        genericName: entry.genericName,
+        label: entry.label,
+        operationalModels: entry.operationalModels
+      })),
+      staffQualifications: qualificationCatalogue.qualifications.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        code: entry.code,
+        roleRestrictions: entry.roleRestrictions,
+        operationalModels: entry.operationalModels,
+        status: entry.status
+      })),
+      unitCallsigns: callsignSettings.entries.map((entry) => ({
+        id: entry.id,
+        unitCode: entry.unitCode,
+        callsign: entry.callsign,
+        isDefault: entry.isDefault
+      })),
+      callsignPolicies: callsignSettings.policies
+    };
+  };
+  const recordStep19SettingsTrace = (stage, details = {}) => {
+    if (!wizardEditMode || scrollTarget !== "platform-rank-terminology") return;
+    appendSettingsTraceEntry({
+      stage,
+      atIso: (/* @__PURE__ */ new Date()).toISOString(),
+      atMs: Number(getTraceNow().toFixed(2)),
+      details,
+      renderCount: settingsTraceRef.current.renderCount,
+      snapshot: getStep19UnitSettingsSnapshot()
+    });
+  };
+  const exportStep19SettingsTrace = () => {
+    const trace = typeof window !== "undefined" ? JSON.parse(window.localStorage.getItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY) || "[]") : [];
+    const filename = `step-19-settings-trace-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    downloadTextFile(filename, JSON.stringify({
+      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      storageKey: STEP_19_SETTINGS_TRACE_STORAGE_KEY,
+      currentSnapshot: getStep19UnitSettingsSnapshot(),
+      events: Array.isArray(trace) ? trace : []
+    }, null, 2), "application/json");
+  };
+  const clearStep19SettingsTrace = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY);
+      window.dfpStep19SettingsTrace = [];
+    }
+    settingsTraceRef.current.events = [];
+    recordStep19SettingsTrace("trace:cleared", {
+      reason: "manual-clear-before-reproduction"
+    });
+  };
   const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0]?.trim() : String(activeUnitCode || "").trim();
@@ -21716,6 +21817,7 @@ This permanently removes the organisation record from platform configuration and
     }));
   };
   const updatePersonnelDisplaySettings = (changes) => {
+    recordStep19SettingsTrace("field:update-personnel-display:start", { changes });
     setRankTerminologyDirty(true);
     updateActiveUnitSettings((settings) => ({
       ...settings,
@@ -21724,6 +21826,7 @@ This permanently removes the organisation record from platform configuration and
         ...changes
       })
     }));
+    recordStep19SettingsTrace("field:update-personnel-display:queued", { changes });
   };
   const updateStaffRankEquivalency = (nextEquivalency) => {
     const staffRankEquivalency2 = normaliseRankEquivalencyConfig(nextEquivalency);
@@ -21766,6 +21869,7 @@ This permanently removes the organisation record from platform configuration and
     updateStaffRankEquivalency(nextEquivalency);
   };
   const updateTrainingReportTerminology = (changes) => {
+    recordStep19SettingsTrace("field:update-training-report:start", { changes });
     setRankTerminologyDirty(true);
     updateActiveUnitSettings((settings) => ({
       ...settings,
@@ -21774,8 +21878,10 @@ This permanently removes the organisation record from platform configuration and
         ...changes
       })
     }));
+    recordStep19SettingsTrace("field:update-training-report:queued", { changes });
   };
   const updateSctTerminology = (changes) => {
+    recordStep19SettingsTrace("field:update-sct:start", { changes });
     setRankTerminologyDirty(true);
     updateActiveUnitSettings((settings) => ({
       ...settings,
@@ -21784,8 +21890,14 @@ This permanently removes the organisation record from platform configuration and
         ...changes
       })
     }));
+    recordStep19SettingsTrace("field:update-sct:queued", { changes });
   };
   const updateCrewPositionTerminology = (positions, renamedPosition, deletedDefaultIds = crewPositionTerminology.deletedDefaultIds || []) => {
+    recordStep19SettingsTrace("field:update-crew-positions:start", {
+      changedPositionCount: positions.length,
+      renamedPosition,
+      deletedDefaultIds
+    });
     setRankTerminologyDirty(true);
     const previousConfig = draftConfigRef.current;
     const previousUnits = Array.isArray(previousConfig.units) ? previousConfig.units : [];
@@ -21820,6 +21932,11 @@ This permanently removes the organisation record from platform configuration and
     draftConfigRef.current = nextConfig;
     notifyPlatformConfigUpdatedSoon(nextConfig);
     setConfig(nextConfig);
+    recordStep19SettingsTrace("field:update-crew-positions:queued", {
+      changedPositionCount: positions.length,
+      renamedPosition,
+      deletedDefaultIds
+    });
   };
   const updateCrewPositionEntry = (entryId, changes) => {
     const currentEntry = crewPositionTerminology.positions.find((entry) => entry.id === entryId);
@@ -21849,11 +21966,27 @@ This permanently removes the organisation record from platform configuration and
   };
   const defaultStaffQualificationIds = new Set(DEFAULT_STAFF_QUALIFICATIONS.qualifications.map((entry) => entry.id));
   const updateStaffQualificationCatalogue = (qualifications, deletedDefaultIds = staffQualificationCatalogue.deletedDefaultIds || []) => {
+    recordStep19SettingsTrace("field:update-staff-qualifications:start", {
+      qualificationCount: qualifications.length,
+      qualifications: qualifications.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        code: entry.code,
+        roleRestrictions: entry.roleRestrictions,
+        operationalModels: entry.operationalModels,
+        status: entry.status
+      })),
+      deletedDefaultIds
+    });
     setRankTerminologyDirty(true);
     updateActiveUnitSettings((settings) => ({
       ...settings,
       staffQualificationCatalogue: normaliseStaffQualificationCatalogue({ qualifications, deletedDefaultIds })
     }));
+    recordStep19SettingsTrace("field:update-staff-qualifications:queued", {
+      qualificationCount: qualifications.length,
+      deletedDefaultIds
+    });
   };
   const focusLinkedInstructorQualification = () => {
     const target = linkedInstructorQualificationInputId ? document.getElementById(linkedInstructorQualificationInputId) : null;
@@ -21892,11 +22025,13 @@ This permanently removes the organisation record from platform configuration and
     updateStaffQualificationCatalogue(nextQualifications, nextDeletedDefaultIds);
   };
   const updateUnitCallsignSettings = (entries, policies = unitCallsignSettings.policies) => {
+    recordStep19SettingsTrace("field:update-unit-callsigns:start", { entries, policies });
     setRankTerminologyDirty(true);
     updateActiveUnitSettings((settings) => ({
       ...settings,
       unitCallsignSettings: normaliseUnitCallsignSettings({ entries, policies })
     }));
+    recordStep19SettingsTrace("field:update-unit-callsigns:queued", { entryCount: entries.length, policyCount: policies.length });
   };
   const updateUnitCallsignEntry = (entryId, changes) => {
     updateUnitCallsignSettings(unitCallsignSettings.entries.map((entry) => entry.id === entryId ? { ...entry, ...changes } : entry));
@@ -24733,9 +24868,18 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     onShowSuccess(`DFP Resource Rows "${selectedResourcePoolDeleteOption.name}" removed. Press Save to apply the deletion.`);
   };
   const save = async (configOverride, restoreSection, options) => {
+    recordStep19SettingsTrace("save:requested", {
+      restoreSection: restoreSection || null,
+      hasConfigOverride: Boolean(configOverride && Array.isArray(configOverride.locations)),
+      configStateSnapshot: getStep19UnitSettingsSnapshot(config),
+      draftConfigSnapshot: getStep19UnitSettingsSnapshot(draftConfigRef.current)
+    });
     const candidateConfig = ensureResourcePoolCodes(fillSingleAircraftTypeForResourceRows(
       configOverride && Array.isArray(configOverride.locations) ? configOverride : draftConfigRef.current
     ));
+    recordStep19SettingsTrace("save:candidate-built", {
+      candidateSnapshot: getStep19UnitSettingsSnapshot(candidateConfig)
+    });
     const rowSavePlan = options?.skipResourceRowProtection ? null : buildResourceRowSavePlan(candidateConfig);
     const hasRowChanges = (rowSavePlan?.changedContexts.length || 0) > 0;
     const rowSaveTomorrowDisplay = rowSavePlan ? formatDateLabel(rowSavePlan.tomorrow) : "";
@@ -24794,6 +24938,9 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     const configToSave = buildSeparationReadyConfig(normaliseSettingsPlatformConfig(
       rowSavePlan?.configToSave || candidateConfig
     ));
+    recordStep19SettingsTrace("save:normalised-payload", {
+      payloadSnapshot: getStep19UnitSettingsSnapshot(configToSave)
+    });
     if (hasRowChanges && rowSavePlan) {
       try {
         localStorage.setItem("dfp_resource_rows_last_save_trace", JSON.stringify({
@@ -24843,6 +24990,9 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         loadedConfigRef.current = configToSave;
         draftConfigRef.current = configToSave;
         setConfig(configToSave);
+        recordStep19SettingsTrace("save:setup-test-success", {
+          savedSnapshot: getStep19UnitSettingsSnapshot(configToSave)
+        });
         onShowSuccess(
           hasRowChanges && rowSavePlan ? `DFP resource rows saved. Current day and past days are unchanged. New rows apply from ${rowSaveTomorrowDisplay}.` : options?.successMessage || "Platform configuration saved."
         );
@@ -24859,8 +25009,16 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       });
       if (!res.ok) {
         const body = await res.text();
+        recordStep19SettingsTrace("save:api-error", {
+          status: res.status,
+          body: String(body || "").slice(0, 500)
+        });
         throw new Error(body || `Save failed (${res.status})`);
       }
+      recordStep19SettingsTrace("save:api-success", {
+        status: res.status,
+        savedSnapshot: getStep19UnitSettingsSnapshot(configToSave)
+      });
       const previousLocationMap = new Map(
         loadedConfigRef.current.locations.map((location) => [getPlatformLocationAuditKey(location), location])
       );
@@ -25210,6 +25368,9 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       loadedConfigRef.current = nextConfig2;
       draftConfigRef.current = nextConfig2;
       notifyPlatformConfigUpdated(nextConfig2);
+      recordStep19SettingsTrace("reload:setup-test-config", {
+        reloadedSnapshot: getStep19UnitSettingsSnapshot(nextConfig2)
+      });
       return;
     }
     const res = await fetch(`${getApiBase()}/platform-config`);
@@ -25220,6 +25381,9 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     loadedConfigRef.current = nextConfig;
     draftConfigRef.current = nextConfig;
     notifyPlatformConfigUpdated(nextConfig);
+    recordStep19SettingsTrace("reload:api-config", {
+      reloadedSnapshot: getStep19UnitSettingsSnapshot(nextConfig)
+    });
   };
   const verifySignedLicense = async () => {
     if (!licenseImportText.trim()) {
@@ -30287,6 +30451,32 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               subtitle: "Configure personnel display order, local role terminology and customer-facing report labels."
             }
           ),
+          wizardEditMode && scrollTarget === "platform-rank-terminology" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-4 mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-950", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide", children: "Step 19 Data Tracking" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed", children: "Tracking field commits, unit settings updates, save payloads and reload results for this wizard page." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: clearStep19SettingsTrace,
+                  className: "rounded border border-amber-400 bg-amber-100 px-3 py-2 text-xs font-bold text-amber-950 shadow-sm hover:bg-amber-200",
+                  children: "Clear Trace"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: exportStep19SettingsTrace,
+                  className: "rounded border border-amber-500 bg-white px-3 py-2 text-xs font-bold text-amber-950 shadow-sm hover:bg-amber-100",
+                  children: "Export Trace"
+                }
+              )
+            ] })
+          ] }) }) : null,
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
             !hasRankTerminologyEditPermission ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80", children: "Rank, Terminology & Labels is read-only for your permission profile. Grant “Edit rank and terminology settings” in Master Permission Profiles before this section can be edited." }) : !rankTerminologyUnlocked && !wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Rank, Terminology & Labels is locked. Press Edit and confirm your password before changing rank order, terminology or labels." }) : null,
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-personnel-terminology", className: "flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-700 bg-gray-950/70 p-4", children: [
@@ -42422,11 +42612,24 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const settingsSaveLabel = wizardSettingsSaveSteps[visibleStep.id];
     if (settingsSaveLabel) {
       const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
+      if (visibleStep.id === "callsigns") {
+        pushWizardPersistenceTrace("step-19-settings-save:requested", {
+          activeUnitCodes: getWizardActiveUnitCodes(),
+          unitDraftCode: unitDraft.code,
+          currentUnitCode: unitCode
+        });
+      }
       if (!saveWizardSettings) {
         setSaveMessage(`${settingsSaveLabel} is still loading. Try Next again in a moment.`);
+        if (visibleStep.id === "callsigns") {
+          pushWizardPersistenceTrace("step-19-settings-save:missing-callback");
+        }
         return;
       }
       const saved = await saveWizardSettings();
+      if (visibleStep.id === "callsigns") {
+        pushWizardPersistenceTrace("step-19-settings-save:result", { saved });
+      }
       if (!saved) {
         setSaveMessage(`${settingsSaveLabel} changes were not saved. Review the page before continuing.`);
         return;

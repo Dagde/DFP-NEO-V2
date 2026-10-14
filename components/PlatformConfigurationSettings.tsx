@@ -2464,6 +2464,8 @@ const getTraceNow = (): number => (
     : Date.now()
 );
 
+const STEP_19_SETTINGS_TRACE_STORAGE_KEY = 'dfp_step_19_settings_trace';
+
 const TRAINING_REPORT_OVERVIEW_FIELD_INFO: Record<string, string> = {
   event: 'The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as a lesson code, task code or sortie number.',
   training: 'The label for the training stream that owns the event. Depending on the operational model, this may be a course, LMP, package, task stream or assigned training sequence.',
@@ -2706,6 +2708,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       loadedConfigRef.current = nextConfig;
       draftConfigRef.current = nextConfig;
       setConfig(nextConfig);
+      if (wizardEditMode && scrollTarget === 'platform-rank-terminology') {
+        appendSettingsTraceEntry({
+          stage: 'external-config-updated-event',
+          atIso: new Date().toISOString(),
+          atMs: Number(getTraceNow().toFixed(2)),
+          details: { activeSettingsUnitCode },
+        });
+      }
     };
     window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
     return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
@@ -2818,6 +2828,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const events = settingsTraceRef.current.events;
     events.push(traceEvent);
     if (events.length > 120) events.splice(0, events.length - 120);
+  };
+
+  const appendSettingsTraceEntry = (entry: Record<string, any>) => {
+    const events = settingsTraceRef.current.events;
+    events.push(entry);
+    if (events.length > 160) events.splice(0, events.length - 160);
+    if (typeof window === 'undefined') return;
+    try {
+      const existing = JSON.parse(window.localStorage.getItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY) || '[]');
+      const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-220);
+      window.localStorage.setItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY, JSON.stringify(next, null, 2));
+      (window as any).dfpStep19SettingsTrace = next;
+    } catch {
+      // Tracing must not interfere with settings edits.
+    }
   };
 
   useEffect(() => {
@@ -3408,6 +3433,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
   const commitWizardPlaceholderField = (key: string, commit: (value: string) => void) => (value: string) => {
+    recordStep19SettingsTrace('field:commit-placeholder', {
+      key,
+      value,
+      valueLength: String(value || '').length,
+      trimmedLength: String(value || '').trim().length,
+    });
     if (String(value || '').trim()) markWizardPlaceholderEdited(key);
     commit(value);
   };
@@ -3430,6 +3461,83 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const unitCallsignSettings = normaliseUnitCallsignSettings(
     activeSettingsUnitSettings.unitCallsignSettings || primaryOrganisationSettings.unitCallsignSettings || null,
   );
+  const getStep19UnitSettingsSnapshot = (sourceConfig: PlatformConfig = draftConfigRef.current) => {
+    const sourceUnits = Array.isArray(sourceConfig.units) ? sourceConfig.units : [];
+    const unit = sourceUnits.find((candidate) => (
+      String(candidate.code || '').trim().toUpperCase() === activeSettingsUnitCode
+    ));
+    const settings = unit?.settings || {};
+    const qualificationCatalogue = normaliseStaffQualificationCatalogue(settings.staffQualificationCatalogue || null);
+    const crewTerminology = normaliseCrewPositionTerminology(settings.crewPositionTerminology || null);
+    const callsignSettings = normaliseUnitCallsignSettings(settings.unitCallsignSettings || null);
+    return {
+      activeSettingsUnitCode,
+      activeUnitCode,
+      activeUnitCodes,
+      scrollTarget,
+      wizardEditMode,
+      hasUnit: Boolean(unit),
+      unitCode: unit?.code || null,
+      unitName: unit?.name || null,
+      personnelDisplaySettings: normalisePersonnelDisplaySettings(settings.personnelDisplaySettings || settings.personnelSettings || null),
+      trainingReportTerminology: normaliseTrainingReportTerminology(settings.trainingReportTerminology || null),
+      sctTerminology: normaliseSctTerminology(settings.sctTerminology || null),
+      crewPositions: crewTerminology.positions.map((entry) => ({
+        id: entry.id,
+        genericName: entry.genericName,
+        label: entry.label,
+        operationalModels: entry.operationalModels,
+      })),
+      staffQualifications: qualificationCatalogue.qualifications.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        code: entry.code,
+        roleRestrictions: entry.roleRestrictions,
+        operationalModels: entry.operationalModels,
+        status: entry.status,
+      })),
+      unitCallsigns: callsignSettings.entries.map((entry) => ({
+        id: entry.id,
+        unitCode: entry.unitCode,
+        callsign: entry.callsign,
+        isDefault: entry.isDefault,
+      })),
+      callsignPolicies: callsignSettings.policies,
+    };
+  };
+  const recordStep19SettingsTrace = (stage: string, details: Record<string, any> = {}) => {
+    if (!wizardEditMode || scrollTarget !== 'platform-rank-terminology') return;
+    appendSettingsTraceEntry({
+      stage,
+      atIso: new Date().toISOString(),
+      atMs: Number(getTraceNow().toFixed(2)),
+      details,
+      renderCount: settingsTraceRef.current.renderCount,
+      snapshot: getStep19UnitSettingsSnapshot(),
+    });
+  };
+  const exportStep19SettingsTrace = () => {
+    const trace = typeof window !== 'undefined'
+      ? JSON.parse(window.localStorage.getItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY) || '[]')
+      : [];
+    const filename = `step-19-settings-trace-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    downloadTextFile(filename, JSON.stringify({
+      exportedAt: new Date().toISOString(),
+      storageKey: STEP_19_SETTINGS_TRACE_STORAGE_KEY,
+      currentSnapshot: getStep19UnitSettingsSnapshot(),
+      events: Array.isArray(trace) ? trace : [],
+    }, null, 2), 'application/json');
+  };
+  const clearStep19SettingsTrace = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY);
+      (window as any).dfpStep19SettingsTrace = [];
+    }
+    settingsTraceRef.current.events = [];
+    recordStep19SettingsTrace('trace:cleared', {
+      reason: 'manual-clear-before-reproduction',
+    });
+  };
   const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || '').includes('+')
@@ -4005,6 +4113,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const updatePersonnelDisplaySettings = (changes: Partial<PersonnelDisplaySettings>) => {
+    recordStep19SettingsTrace('field:update-personnel-display:start', { changes });
     setRankTerminologyDirty(true);
     updateActiveUnitSettings((settings) => ({
       ...settings,
@@ -4013,6 +4122,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ...changes,
       }),
     }));
+    recordStep19SettingsTrace('field:update-personnel-display:queued', { changes });
   };
 
   const updateStaffRankEquivalency = (nextEquivalency: RankEquivalencyConfig) => {
@@ -4069,6 +4179,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const updateTrainingReportTerminology = (changes: Partial<TrainingReportTerminology>) => {
+    recordStep19SettingsTrace('field:update-training-report:start', { changes });
     setRankTerminologyDirty(true);
     updateActiveUnitSettings((settings) => ({
       ...settings,
@@ -4077,9 +4188,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ...changes,
       }),
     }));
+    recordStep19SettingsTrace('field:update-training-report:queued', { changes });
   };
 
   const updateSctTerminology = (changes: Partial<SctTerminology>) => {
+    recordStep19SettingsTrace('field:update-sct:start', { changes });
     setRankTerminologyDirty(true);
     updateActiveUnitSettings((settings) => ({
       ...settings,
@@ -4088,6 +4201,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ...changes,
       }),
     }));
+    recordStep19SettingsTrace('field:update-sct:queued', { changes });
   };
 
   const updateCrewPositionTerminology = (
@@ -4095,6 +4209,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     renamedPosition?: { from: string; to: string },
     deletedDefaultIds = crewPositionTerminology.deletedDefaultIds || [],
   ) => {
+    recordStep19SettingsTrace('field:update-crew-positions:start', {
+      changedPositionCount: positions.length,
+      renamedPosition,
+      deletedDefaultIds,
+    });
     setRankTerminologyDirty(true);
     const previousConfig = draftConfigRef.current;
     const previousUnits = Array.isArray(previousConfig.units) ? previousConfig.units : [];
@@ -4138,6 +4257,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     draftConfigRef.current = nextConfig;
     notifyPlatformConfigUpdatedSoon(nextConfig);
     setConfig(nextConfig);
+    recordStep19SettingsTrace('field:update-crew-positions:queued', {
+      changedPositionCount: positions.length,
+      renamedPosition,
+      deletedDefaultIds,
+    });
   };
 
   const updateCrewPositionEntry = (
@@ -4188,11 +4312,27 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     qualifications: StaffQualificationDefinition[],
     deletedDefaultIds = staffQualificationCatalogue.deletedDefaultIds || [],
   ) => {
+    recordStep19SettingsTrace('field:update-staff-qualifications:start', {
+      qualificationCount: qualifications.length,
+      qualifications: qualifications.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        code: entry.code,
+        roleRestrictions: entry.roleRestrictions,
+        operationalModels: entry.operationalModels,
+        status: entry.status,
+      })),
+      deletedDefaultIds,
+    });
     setRankTerminologyDirty(true);
     updateActiveUnitSettings((settings) => ({
       ...settings,
       staffQualificationCatalogue: normaliseStaffQualificationCatalogue({ qualifications, deletedDefaultIds }),
     }));
+    recordStep19SettingsTrace('field:update-staff-qualifications:queued', {
+      qualificationCount: qualifications.length,
+      deletedDefaultIds,
+    });
   };
 
   const focusLinkedInstructorQualification = () => {
@@ -4250,11 +4390,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     entries: UnitCallsignEntry[],
     policies: UnitCallsignPolicy[] = unitCallsignSettings.policies,
   ) => {
+    recordStep19SettingsTrace('field:update-unit-callsigns:start', { entries, policies });
     setRankTerminologyDirty(true);
     updateActiveUnitSettings((settings) => ({
       ...settings,
       unitCallsignSettings: normaliseUnitCallsignSettings({ entries, policies }),
     }));
+    recordStep19SettingsTrace('field:update-unit-callsigns:queued', { entryCount: entries.length, policyCount: policies.length });
   };
 
   const updateUnitCallsignEntry = (entryId: string, changes: Partial<UnitCallsignEntry>) => {
@@ -7864,11 +8006,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     restoreSection?: string,
     options?: { reloadPage?: boolean; successMessage?: string; skipResourceRowProtection?: boolean },
   ) => {
+    recordStep19SettingsTrace('save:requested', {
+      restoreSection: restoreSection || null,
+      hasConfigOverride: Boolean(configOverride && Array.isArray(configOverride.locations)),
+      configStateSnapshot: getStep19UnitSettingsSnapshot(config),
+      draftConfigSnapshot: getStep19UnitSettingsSnapshot(draftConfigRef.current),
+    });
     const candidateConfig = ensureResourcePoolCodes(fillSingleAircraftTypeForResourceRows(
       configOverride && Array.isArray(configOverride.locations)
         ? configOverride
         : draftConfigRef.current
     ));
+    recordStep19SettingsTrace('save:candidate-built', {
+      candidateSnapshot: getStep19UnitSettingsSnapshot(candidateConfig),
+    });
     const rowSavePlan = options?.skipResourceRowProtection
       ? null
       : buildResourceRowSavePlan(candidateConfig);
@@ -7930,6 +8081,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const configToSave = buildSeparationReadyConfig(normaliseSettingsPlatformConfig(
       rowSavePlan?.configToSave || candidateConfig
     ));
+    recordStep19SettingsTrace('save:normalised-payload', {
+      payloadSnapshot: getStep19UnitSettingsSnapshot(configToSave),
+    });
     if (hasRowChanges && rowSavePlan) {
       try {
         localStorage.setItem('dfp_resource_rows_last_save_trace', JSON.stringify({
@@ -7985,6 +8139,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         loadedConfigRef.current = configToSave;
         draftConfigRef.current = configToSave;
         setConfig(configToSave);
+        recordStep19SettingsTrace('save:setup-test-success', {
+          savedSnapshot: getStep19UnitSettingsSnapshot(configToSave),
+        });
         onShowSuccess(
           hasRowChanges && rowSavePlan
             ? `DFP resource rows saved. Current day and past days are unchanged. New rows apply from ${rowSaveTomorrowDisplay}.`
@@ -8003,8 +8160,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       });
       if (!res.ok) {
         const body = await res.text();
+        recordStep19SettingsTrace('save:api-error', {
+          status: res.status,
+          body: String(body || '').slice(0, 500),
+        });
         throw new Error(body || `Save failed (${res.status})`);
       }
+      recordStep19SettingsTrace('save:api-success', {
+        status: res.status,
+        savedSnapshot: getStep19UnitSettingsSnapshot(configToSave),
+      });
       const previousLocationMap = new Map(
         loadedConfigRef.current.locations.map((location) => [getPlatformLocationAuditKey(location), location])
       );
@@ -8404,6 +8569,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       loadedConfigRef.current = nextConfig;
       draftConfigRef.current = nextConfig;
       notifyPlatformConfigUpdated(nextConfig);
+      recordStep19SettingsTrace('reload:setup-test-config', {
+        reloadedSnapshot: getStep19UnitSettingsSnapshot(nextConfig),
+      });
       return;
     }
     const res = await fetch(`${getApiBase()}/platform-config`);
@@ -8414,6 +8582,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     loadedConfigRef.current = nextConfig;
     draftConfigRef.current = nextConfig;
     notifyPlatformConfigUpdated(nextConfig);
+    recordStep19SettingsTrace('reload:api-config', {
+      reloadedSnapshot: getStep19UnitSettingsSnapshot(nextConfig),
+    });
   };
 
   const verifySignedLicense = async () => {
@@ -13883,6 +14054,34 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           title="Rank, Terminology & Labels"
           subtitle="Configure personnel display order, local role terminology and customer-facing report labels."
         />
+        {wizardEditMode && scrollTarget === 'platform-rank-terminology' ? (
+          <div className="mx-4 mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-950">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wide">Step 19 Data Tracking</div>
+                <p className="mt-1 text-xs leading-relaxed">
+                  Tracking field commits, unit settings updates, save payloads and reload results for this wizard page.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={clearStep19SettingsTrace}
+                  className="rounded border border-amber-400 bg-amber-100 px-3 py-2 text-xs font-bold text-amber-950 shadow-sm hover:bg-amber-200"
+                >
+                  Clear Trace
+                </button>
+                <button
+                  type="button"
+                  onClick={exportStep19SettingsTrace}
+                  className="rounded border border-amber-500 bg-white px-3 py-2 text-xs font-bold text-amber-950 shadow-sm hover:bg-amber-100"
+                >
+                  Export Trace
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
         <div className="space-y-4 p-4">
           {!hasRankTerminologyEditPermission ? (
             <div className="rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80">

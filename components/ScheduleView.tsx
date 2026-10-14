@@ -11774,11 +11774,24 @@ const InitialSetupWizard: React.FC<{
         const settingsSaveLabel = wizardSettingsSaveSteps[visibleStep.id];
         if (settingsSaveLabel) {
             const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
+            if (visibleStep.id === 'callsigns') {
+                pushWizardPersistenceTrace('step-19-settings-save:requested', {
+                    activeUnitCodes: getWizardActiveUnitCodes(),
+                    unitDraftCode: unitDraft.code,
+                    currentUnitCode: unitCode,
+                });
+            }
             if (!saveWizardSettings) {
                 setSaveMessage(`${settingsSaveLabel} is still loading. Try Next again in a moment.`);
+                if (visibleStep.id === 'callsigns') {
+                    pushWizardPersistenceTrace('step-19-settings-save:missing-callback');
+                }
                 return;
             }
             const saved = await saveWizardSettings();
+            if (visibleStep.id === 'callsigns') {
+                pushWizardPersistenceTrace('step-19-settings-save:result', { saved });
+            }
             if (!saved) {
                 setSaveMessage(`${settingsSaveLabel} changes were not saved. Review the page before continuing.`);
                 return;
