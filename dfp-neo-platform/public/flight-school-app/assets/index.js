@@ -36316,28 +36316,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
   };
   reactExports.useEffect(() => {
-    if (typeof window === "undefined") return void 0;
-    const handlePlatformConfigUpdated = (event) => {
-      if (mode !== "active") return;
-      if (!["callsigns"].includes(visibleStep.id)) return;
-      const detail = event.detail || {};
-      if (!detail.config || !Array.isArray(detail.config.units)) return;
-      wizardPlatformSettingsDraftRef.current = detail.config;
-      wizardPlatformSettingsDraftMetaRef.current = {
-        stepId: visibleStep.id,
-        unitCodes: getWizardActiveUnitCodes(),
-        sequence: Number(detail.sequence || 0)
-      };
-      pushWizardPersistenceTrace("settings-embed-draft:captured", {
-        stepId: visibleStep.id,
-        unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
-        sequence: wizardPlatformSettingsDraftMetaRef.current.sequence
-      });
-    };
-    window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
-    return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
-  }, [mode, visibleStep.id]);
-  reactExports.useEffect(() => {
     onInitialSetupWizardFinishedRef.current = onInitialSetupWizardFinished;
   }, [onInitialSetupWizardFinished]);
   reactExports.useEffect(() => {
@@ -40092,6 +40070,28 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const currentStep = Math.min(wizardStep, steps.length - 1);
   const visibleStep = steps[currentStep];
   const wizardStepIdSignature = steps.map((step) => step.id).join("|");
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return void 0;
+    const handlePlatformConfigUpdated = (event) => {
+      if (mode !== "active") return;
+      if (visibleStep.id !== "callsigns") return;
+      const detail = event.detail || {};
+      if (!detail.config || !Array.isArray(detail.config.units)) return;
+      wizardPlatformSettingsDraftRef.current = detail.config;
+      wizardPlatformSettingsDraftMetaRef.current = {
+        stepId: visibleStep.id,
+        unitCodes: getWizardActiveUnitCodes(),
+        sequence: Number(detail.sequence || 0)
+      };
+      pushWizardPersistenceTrace("settings-embed-draft:captured", {
+        stepId: visibleStep.id,
+        unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
+        sequence: wizardPlatformSettingsDraftMetaRef.current.sequence
+      });
+    };
+    window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
+    return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
+  }, [mode, visibleStep.id]);
   reactExports.useEffect(() => {
     if (!isSavedWizardFreshUnitSetup()) return;
     setWizardFreshUnitSetupActive(true);

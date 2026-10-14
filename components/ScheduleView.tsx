@@ -3931,29 +3931,6 @@ const InitialSetupWizard: React.FC<{
     };
 
     useEffect(() => {
-        if (typeof window === 'undefined') return undefined;
-        const handlePlatformConfigUpdated = (event: Event) => {
-            if (mode !== 'active') return;
-            if (!['callsigns'].includes(visibleStep.id)) return;
-            const detail = (event as CustomEvent<{ config?: any; sequence?: number }>).detail || {};
-            if (!detail.config || !Array.isArray(detail.config.units)) return;
-            wizardPlatformSettingsDraftRef.current = detail.config;
-            wizardPlatformSettingsDraftMetaRef.current = {
-                stepId: visibleStep.id,
-                unitCodes: getWizardActiveUnitCodes(),
-                sequence: Number(detail.sequence || 0),
-            };
-            pushWizardPersistenceTrace('settings-embed-draft:captured', {
-                stepId: visibleStep.id,
-                unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
-                sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
-            });
-        };
-        window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
-        return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
-    }, [mode, visibleStep.id]);
-
-    useEffect(() => {
         onInitialSetupWizardFinishedRef.current = onInitialSetupWizardFinished;
     }, [onInitialSetupWizardFinished]);
 
@@ -8360,6 +8337,28 @@ const InitialSetupWizard: React.FC<{
     const currentStep = Math.min(wizardStep, steps.length - 1);
     const visibleStep = steps[currentStep];
     const wizardStepIdSignature = steps.map((step) => step.id).join('|');
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const handlePlatformConfigUpdated = (event: Event) => {
+            if (mode !== 'active') return;
+            if (visibleStep.id !== 'callsigns') return;
+            const detail = (event as CustomEvent<{ config?: any; sequence?: number }>).detail || {};
+            if (!detail.config || !Array.isArray(detail.config.units)) return;
+            wizardPlatformSettingsDraftRef.current = detail.config;
+            wizardPlatformSettingsDraftMetaRef.current = {
+                stepId: visibleStep.id,
+                unitCodes: getWizardActiveUnitCodes(),
+                sequence: Number(detail.sequence || 0),
+            };
+            pushWizardPersistenceTrace('settings-embed-draft:captured', {
+                stepId: visibleStep.id,
+                unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
+                sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
+            });
+        };
+        window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+        return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+    }, [mode, visibleStep.id]);
     useEffect(() => {
         if (!isSavedWizardFreshUnitSetup()) return;
         setWizardFreshUnitSetupActive(true);
