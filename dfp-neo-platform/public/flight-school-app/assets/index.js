@@ -18787,6 +18787,7 @@ const emptyConfig = {
   schedulingRuleSets: []
 };
 let cachedPlatformConfig = null;
+let platformConfigUpdateSequence = 0;
 let cachedPlatformLicenseStatus = null;
 let cachedAirfieldCatalogue = null;
 const getApiBase = () => getAppApiBase();
@@ -19297,14 +19298,16 @@ const getPlatformConfigSaveBlocker = (config, options = {}) => {
   if (!hasActiveUnits) return { message: "Platform configuration save blocked: at least one active unit is required while organisations or locations still exist." };
   return null;
 };
-const notifyPlatformConfigUpdated = (config) => {
+const notifyPlatformConfigUpdated = (config, sequence) => {
   cachedPlatformConfig = config;
   if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT$1, { detail: { config } }));
+  const updateSequence = sequence ?? ++platformConfigUpdateSequence;
+  window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT$1, { detail: { config, sequence: updateSequence } }));
 };
 const notifyPlatformConfigUpdatedSoon = (config) => {
   if (typeof window === "undefined") return;
-  window.setTimeout(() => notifyPlatformConfigUpdated(config), 0);
+  const updateSequence = ++platformConfigUpdateSequence;
+  window.setTimeout(() => notifyPlatformConfigUpdated(config, updateSequence), 0);
 };
 const normaliseOrganisationPathKey = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 const buildOrganisationOptionRenameMaps = (previousStructure, nextStructure) => {
@@ -20549,6 +20552,7 @@ const PlatformConfigurationSettings = ({
   const [errorLink, setErrorLink] = reactExports.useState(null);
   const loadedConfigRef = reactExports.useRef(cachedPlatformConfig || emptyConfig);
   const draftConfigRef = reactExports.useRef(cachedPlatformConfig || emptyConfig);
+  const lastAppliedPlatformConfigUpdateSequenceRef = reactExports.useRef(0);
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = reactExports.useState({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = reactExports.useState({});
@@ -20610,7 +20614,13 @@ const PlatformConfigurationSettings = ({
   }, []);
   reactExports.useEffect(() => {
     const handlePlatformConfigUpdated = (event) => {
-      const rawConfig = event.detail?.config;
+      const detail = event.detail;
+      const incomingSequence = Number(detail?.sequence || 0);
+      if (incomingSequence > 0) {
+        if (incomingSequence < lastAppliedPlatformConfigUpdateSequenceRef.current) return;
+        lastAppliedPlatformConfigUpdateSequenceRef.current = incomingSequence;
+      }
+      const rawConfig = detail?.config;
       const nextConfig = rawConfig && Array.isArray(rawConfig.units) ? applyDefaultUnitTraineeAvailability$1(rawConfig) : rawConfig;
       if (!nextConfig || !Array.isArray(nextConfig.units)) return;
       cachedPlatformConfig = nextConfig;

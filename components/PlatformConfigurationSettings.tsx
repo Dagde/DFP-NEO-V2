@@ -315,6 +315,7 @@ const emptyConfig: PlatformConfig = {
 };
 
 let cachedPlatformConfig: PlatformConfig | null = null;
+let platformConfigUpdateSequence = 0;
 let cachedPlatformLicenseStatus: LicenseRuntimeStatus | null = null;
 let cachedAirfieldCatalogue: AirfieldCatalogueEntry[] | null = null;
 
@@ -1034,15 +1035,17 @@ const getPlatformConfigSaveBlocker = (
   return null;
 };
 
-const notifyPlatformConfigUpdated = (config: PlatformConfig) => {
+const notifyPlatformConfigUpdated = (config: PlatformConfig, sequence?: number) => {
   cachedPlatformConfig = config;
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config } }));
+  const updateSequence = sequence ?? ++platformConfigUpdateSequence;
+  window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config, sequence: updateSequence } }));
 };
 
 const notifyPlatformConfigUpdatedSoon = (config: PlatformConfig) => {
   if (typeof window === 'undefined') return;
-  window.setTimeout(() => notifyPlatformConfigUpdated(config), 0);
+  const updateSequence = ++platformConfigUpdateSequence;
+  window.setTimeout(() => notifyPlatformConfigUpdated(config, updateSequence), 0);
 };
 
 const normaliseOrganisationPathKey = (value: unknown): string => (
@@ -2629,6 +2632,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [errorLink, setErrorLink] = useState<PlatformConfigSaveBlocker['link'] | null>(null);
   const loadedConfigRef = useRef<PlatformConfig>(cachedPlatformConfig || emptyConfig);
   const draftConfigRef = useRef<PlatformConfig>(cachedPlatformConfig || emptyConfig);
+  const lastAppliedPlatformConfigUpdateSequenceRef = useRef(0);
   const unitTypeOptions = useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = useState<Partial<Pick<TrainingReportTemplate, 'genericName' | 'displayName'>>>({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = useState<Record<string, string>>({});
@@ -2699,7 +2703,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   useEffect(() => {
     const handlePlatformConfigUpdated = (event: Event) => {
-      const rawConfig = (event as CustomEvent<{ config?: PlatformConfig }>).detail?.config;
+      const detail = (event as CustomEvent<{ config?: PlatformConfig; sequence?: number }>).detail;
+      const incomingSequence = Number(detail?.sequence || 0);
+      if (incomingSequence > 0) {
+        if (incomingSequence < lastAppliedPlatformConfigUpdateSequenceRef.current) return;
+        lastAppliedPlatformConfigUpdateSequenceRef.current = incomingSequence;
+      }
+      const rawConfig = detail?.config;
       const nextConfig = rawConfig && Array.isArray(rawConfig.units)
         ? applyDefaultUnitTraineeAvailability(rawConfig)
         : rawConfig;
