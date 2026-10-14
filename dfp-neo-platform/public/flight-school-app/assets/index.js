@@ -20660,6 +20660,17 @@ const PlatformConfigurationSettings = ({
     return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
   }, []);
   reactExports.useEffect(() => {
+    if (wizardEditModeRef.current && scrollTargetRef.current === "platform-rank-terminology") {
+      appendSettingsTraceEntry({
+        stage: "config-state-sync:ignored-wizard-draft",
+        atIso: (/* @__PURE__ */ new Date()).toISOString(),
+        atMs: Number(getTraceNow().toFixed(2)),
+        details: { activeSettingsUnitCode },
+        renderCount: settingsTraceRef.current.renderCount,
+        snapshot: getStep19UnitSettingsSnapshot()
+      });
+      return;
+    }
     draftConfigRef.current = config;
   }, [config]);
   const [selectedAccessUserId, setSelectedAccessUserId] = reactExports.useState("");

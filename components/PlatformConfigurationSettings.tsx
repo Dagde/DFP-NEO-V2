@@ -2753,6 +2753,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, []);
 
   useEffect(() => {
+    if (wizardEditModeRef.current && scrollTargetRef.current === 'platform-rank-terminology') {
+      appendSettingsTraceEntry({
+        stage: 'config-state-sync:ignored-wizard-draft',
+        atIso: new Date().toISOString(),
+        atMs: Number(getTraceNow().toFixed(2)),
+        details: { activeSettingsUnitCode },
+        renderCount: settingsTraceRef.current.renderCount,
+        snapshot: getStep19UnitSettingsSnapshot(),
+      });
+      return;
+    }
     draftConfigRef.current = config;
   }, [config]);
 
