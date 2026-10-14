@@ -1159,6 +1159,7 @@ const initialSetupWizardOrganisationDraftStorageKey = 'dfp-initial-setup-wizard-
 const initialSetupWizardDraftSnapshotStorageKey = 'dfp-initial-setup-wizard-draft-snapshot';
 const initialSetupWizardCompletedStepsStorageKey = 'dfp-initial-setup-wizard-completed-steps';
 const initialSetupWizardCompletedAtStorageKey = 'dfp-initial-setup-wizard-completed-at';
+const PLATFORM_CONFIG_UPDATED_EVENT = 'dfp-platform-config-updated';
 const WIZARD_SYLLABUS_COURSE_SHELL_NOTE = '[DFP_COURSE_SHELL]';
 const WIZARD_NONE_QUALIFICATION_MAPPING = '__none__';
 const MAX_INITIAL_SETUP_ORGANISATION_LEVELS = 12;
@@ -3671,6 +3672,12 @@ const InitialSetupWizard: React.FC<{
     const wizardShellRef = useRef<HTMLDivElement | null>(null);
     const wizardSettingsEmbedRef = useRef<HTMLDivElement | null>(null);
     const wizardPlatformSettingsSaveRef = useRef<(() => Promise<boolean>) | null>(null);
+    const wizardPlatformSettingsDraftRef = useRef<any | null>(null);
+    const wizardPlatformSettingsDraftMetaRef = useRef<{ stepId: string; unitCodes: string[]; sequence: number }>({
+        stepId: '',
+        unitCodes: [],
+        sequence: 0,
+    });
     const handleWizardPlatformSettingsSaveReady = useCallback((save: (() => Promise<boolean>) | null) => {
         wizardPlatformSettingsSaveRef.current = save;
     }, []);
@@ -3922,6 +3929,29 @@ const InitialSetupWizard: React.FC<{
             setWizardFinishTrace(next);
         }
     };
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const handlePlatformConfigUpdated = (event: Event) => {
+            if (mode !== 'active') return;
+            if (!['callsigns'].includes(visibleStep.id)) return;
+            const detail = (event as CustomEvent<{ config?: any; sequence?: number }>).detail || {};
+            if (!detail.config || !Array.isArray(detail.config.units)) return;
+            wizardPlatformSettingsDraftRef.current = detail.config;
+            wizardPlatformSettingsDraftMetaRef.current = {
+                stepId: visibleStep.id,
+                unitCodes: getWizardActiveUnitCodes(),
+                sequence: Number(detail.sequence || 0),
+            };
+            pushWizardPersistenceTrace('settings-embed-draft:captured', {
+                stepId: visibleStep.id,
+                unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
+                sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
+            });
+        };
+        window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+        return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+    }, [mode, visibleStep.id]);
 
     useEffect(() => {
         onInitialSetupWizardFinishedRef.current = onInitialSetupWizardFinished;
@@ -11764,6 +11794,66 @@ const InitialSetupWizard: React.FC<{
         });
         flyingWindowDraftRef.current = {};
     };
+    const getWizardSettingsSaveLabel = (stepId: string): string => ({
+        'resource-row-details': 'Resource row setup',
+        'aircraft-configs': 'Aircraft CONFIG setup',
+        callsigns: 'Callsign settings',
+        'advanced-scheduling-rules': 'Scheduling rule settings',
+        access: 'User permissions',
+        'deployment-readiness': 'Deployment readiness',
+        'operational-runbook': 'Support and recovery details',
+        licensing: 'Licence details',
+    }[stepId] || '');
+    const persistCapturedWizardPlatformSettingsDraft = async (stepId: string, reason: string): Promise<boolean> => {
+        const capturedConfig = wizardPlatformSettingsDraftRef.current;
+        const capturedMeta = wizardPlatformSettingsDraftMetaRef.current;
+        const matchesStep = capturedMeta.stepId === stepId;
+        pushWizardPersistenceTrace('settings-embed-draft:persist-requested', {
+            stepId,
+            reason,
+            hasCapturedConfig: Boolean(capturedConfig),
+            capturedStepId: capturedMeta.stepId,
+            capturedUnitCodes: capturedMeta.unitCodes,
+            capturedSequence: capturedMeta.sequence,
+            matchesStep,
+        });
+        if (!capturedConfig || !matchesStep || !onUpdatePlatformConfig) return false;
+        onUpdatePlatformConfig(() => capturedConfig);
+        await new Promise((resolve) => window.setTimeout(resolve, 0));
+        pushWizardPersistenceTrace('settings-embed-draft:persisted', {
+            stepId,
+            reason,
+            unitCodes: capturedMeta.unitCodes,
+            sequence: capturedMeta.sequence,
+        });
+        return true;
+    };
+    const saveWizardPlatformSettingsStep = async (stepId: string, settingsSaveLabel: string): Promise<boolean> => {
+        const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
+        pushWizardPersistenceTrace('settings-embed-save:requested', {
+            stepId,
+            settingsSaveLabel,
+            hasCallback: Boolean(saveWizardSettings),
+            hasCapturedDraft: Boolean(wizardPlatformSettingsDraftRef.current),
+            capturedMeta: wizardPlatformSettingsDraftMetaRef.current,
+        });
+        if (!saveWizardSettings) {
+            const fallbackSaved = await persistCapturedWizardPlatformSettingsDraft(stepId, 'missing-callback');
+            if (fallbackSaved) return true;
+            setSaveMessage(`${settingsSaveLabel} is still loading. Try Next again in a moment.`);
+            return false;
+        }
+        const saved = await saveWizardSettings();
+        pushWizardPersistenceTrace('settings-embed-save:callback-result', { stepId, saved });
+        if (!saved) {
+            setSaveMessage(`${settingsSaveLabel} changes were not saved. Review the page before continuing.`);
+            return false;
+        }
+        if (stepId === 'callsigns') {
+            await persistCapturedWizardPlatformSettingsDraft(stepId, 'after-callback-success');
+        }
+        return true;
+    };
     const goToNextWizardStep = async () => {
         const activeElement = typeof document !== 'undefined' ? document.activeElement : null;
         if (
@@ -11783,41 +11873,10 @@ const InitialSetupWizard: React.FC<{
         if (visibleStep.id === 'flying-windows') {
             commitFlyingWindowDrafts();
         }
-        const wizardSettingsSaveSteps: Record<string, string> = {
-            'resource-row-details': 'Resource row setup',
-            'aircraft-configs': 'Aircraft CONFIG setup',
-            callsigns: 'Callsign settings',
-            'advanced-scheduling-rules': 'Scheduling rule settings',
-            access: 'User permissions',
-            'deployment-readiness': 'Deployment readiness',
-            'operational-runbook': 'Support and recovery details',
-            licensing: 'Licence details',
-        };
-        const settingsSaveLabel = wizardSettingsSaveSteps[visibleStep.id];
+        const settingsSaveLabel = getWizardSettingsSaveLabel(visibleStep.id);
         if (settingsSaveLabel) {
-            const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
-            if (visibleStep.id === 'callsigns') {
-                pushWizardPersistenceTrace('step-19-settings-save:requested', {
-                    activeUnitCodes: getWizardActiveUnitCodes(),
-                    unitDraftCode: unitDraft.code,
-                    currentUnitCode: unitCode,
-                });
-            }
-            if (!saveWizardSettings) {
-                setSaveMessage(`${settingsSaveLabel} is still loading. Try Next again in a moment.`);
-                if (visibleStep.id === 'callsigns') {
-                    pushWizardPersistenceTrace('step-19-settings-save:missing-callback');
-                }
-                return;
-            }
-            const saved = await saveWizardSettings();
-            if (visibleStep.id === 'callsigns') {
-                pushWizardPersistenceTrace('step-19-settings-save:result', { saved });
-            }
-            if (!saved) {
-                setSaveMessage(`${settingsSaveLabel} changes were not saved. Review the page before continuing.`);
-                return;
-            }
+            const saved = await saveWizardPlatformSettingsStep(visibleStep.id, settingsSaveLabel);
+            if (!saved) return;
         }
         if (visibleStep.id === 'trainee-courses' && unitDraft.hasTrainees) {
             const courseCount = parseWizardLineItems(traineeCourseOptionsDraft).length;
@@ -11878,8 +11937,13 @@ const InitialSetupWizard: React.FC<{
         if (typeof window !== 'undefined') window.requestAnimationFrame(() => window.setTimeout(syncStep, 0));
         else syncStep();
     };
-    const goToWizardStep = (nextStep: number) => {
+    const goToWizardStep = async (nextStep: number) => {
         const boundedStep = Math.min(steps.length - 1, Math.max(0, nextStep));
+        const settingsSaveLabel = getWizardSettingsSaveLabel(visibleStep.id);
+        if (settingsSaveLabel && boundedStep !== currentStep) {
+            const saved = await saveWizardPlatformSettingsStep(visibleStep.id, settingsSaveLabel);
+            if (!saved) return;
+        }
         pushWizardOrgDiag('wizard:jump-clicked', {
             fromStep: visibleStep.id,
             toStep: steps[boundedStep]?.id,
@@ -12201,7 +12265,7 @@ const InitialSetupWizard: React.FC<{
                                     type="button"
                                     ref={index === currentStep ? wizardCurrentStepMenuItemRef : undefined}
                                     className={wizardStepMenuItemClass(step, index)}
-                                    onClick={() => goToWizardStep(index)}
+                                    onClick={() => { void goToWizardStep(index); }}
                                     role="option"
                                     aria-selected={index === currentStep}
                                 >

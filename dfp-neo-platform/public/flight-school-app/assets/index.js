@@ -19066,7 +19066,7 @@ const getOfflineTimezoneReference = (offset) => {
 };
 const AIRFIELD_CATALOGUE_FILE = "airfield-location-catalog.json";
 const MAX_AIRFIELD_SUGGESTIONS = 6;
-const PLATFORM_CONFIG_UPDATED_EVENT$1 = "dfp-platform-config-updated";
+const PLATFORM_CONFIG_UPDATED_EVENT$2 = "dfp-platform-config-updated";
 const SETTINGS_VISIBILITY_FILTERS = [
   {
     value: "unit",
@@ -19302,7 +19302,7 @@ const notifyPlatformConfigUpdated = (config, sequence) => {
   cachedPlatformConfig = config;
   if (typeof window === "undefined") return;
   const updateSequence = sequence ?? ++platformConfigUpdateSequence;
-  window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT$1, { detail: { config, sequence: updateSequence } }));
+  window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT$2, { detail: { config, sequence: updateSequence } }));
 };
 const notifyPlatformConfigUpdatedSoon = (config) => {
   if (typeof window === "undefined") return;
@@ -20656,8 +20656,8 @@ const PlatformConfigurationSettings = ({
         });
       }
     };
-    window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
-    return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
+    window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$2, handlePlatformConfigUpdated);
+    return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$2, handlePlatformConfigUpdated);
   }, []);
   reactExports.useEffect(() => {
     if (wizardEditModeRef.current && scrollTargetRef.current === "platform-rank-terminology") {
@@ -34289,6 +34289,7 @@ const initialSetupWizardOrganisationDraftStorageKey = "dfp-initial-setup-wizard-
 const initialSetupWizardDraftSnapshotStorageKey = "dfp-initial-setup-wizard-draft-snapshot";
 const initialSetupWizardCompletedStepsStorageKey = "dfp-initial-setup-wizard-completed-steps";
 const initialSetupWizardCompletedAtStorageKey = "dfp-initial-setup-wizard-completed-at";
+const PLATFORM_CONFIG_UPDATED_EVENT$1 = "dfp-platform-config-updated";
 const WIZARD_SYLLABUS_COURSE_SHELL_NOTE = "[DFP_COURSE_SHELL]";
 const WIZARD_NONE_QUALIFICATION_MAPPING = "__none__";
 const MAX_INITIAL_SETUP_ORGANISATION_LEVELS = 12;
@@ -36056,6 +36057,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardShellRef = reactExports.useRef(null);
   const wizardSettingsEmbedRef = reactExports.useRef(null);
   const wizardPlatformSettingsSaveRef = reactExports.useRef(null);
+  const wizardPlatformSettingsDraftRef = reactExports.useRef(null);
+  const wizardPlatformSettingsDraftMetaRef = reactExports.useRef({
+    stepId: "",
+    unitCodes: [],
+    sequence: 0
+  });
   const handleWizardPlatformSettingsSaveReady = reactExports.useCallback((save) => {
     wizardPlatformSettingsSaveRef.current = save;
   }, []);
@@ -36308,6 +36315,28 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       setWizardFinishTrace(next);
     }
   };
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return void 0;
+    const handlePlatformConfigUpdated = (event) => {
+      if (mode !== "active") return;
+      if (!["callsigns"].includes(visibleStep.id)) return;
+      const detail = event.detail || {};
+      if (!detail.config || !Array.isArray(detail.config.units)) return;
+      wizardPlatformSettingsDraftRef.current = detail.config;
+      wizardPlatformSettingsDraftMetaRef.current = {
+        stepId: visibleStep.id,
+        unitCodes: getWizardActiveUnitCodes(),
+        sequence: Number(detail.sequence || 0)
+      };
+      pushWizardPersistenceTrace("settings-embed-draft:captured", {
+        stepId: visibleStep.id,
+        unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
+        sequence: wizardPlatformSettingsDraftMetaRef.current.sequence
+      });
+    };
+    window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
+    return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
+  }, [mode, visibleStep.id]);
   reactExports.useEffect(() => {
     onInitialSetupWizardFinishedRef.current = onInitialSetupWizardFinished;
   }, [onInitialSetupWizardFinished]);
@@ -42930,6 +42959,66 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     });
     flyingWindowDraftRef.current = {};
   };
+  const getWizardSettingsSaveLabel = (stepId) => ({
+    "resource-row-details": "Resource row setup",
+    "aircraft-configs": "Aircraft CONFIG setup",
+    callsigns: "Callsign settings",
+    "advanced-scheduling-rules": "Scheduling rule settings",
+    access: "User permissions",
+    "deployment-readiness": "Deployment readiness",
+    "operational-runbook": "Support and recovery details",
+    licensing: "Licence details"
+  })[stepId] || "";
+  const persistCapturedWizardPlatformSettingsDraft = async (stepId, reason) => {
+    const capturedConfig = wizardPlatformSettingsDraftRef.current;
+    const capturedMeta = wizardPlatformSettingsDraftMetaRef.current;
+    const matchesStep = capturedMeta.stepId === stepId;
+    pushWizardPersistenceTrace("settings-embed-draft:persist-requested", {
+      stepId,
+      reason,
+      hasCapturedConfig: Boolean(capturedConfig),
+      capturedStepId: capturedMeta.stepId,
+      capturedUnitCodes: capturedMeta.unitCodes,
+      capturedSequence: capturedMeta.sequence,
+      matchesStep
+    });
+    if (!capturedConfig || !matchesStep || !onUpdatePlatformConfig) return false;
+    onUpdatePlatformConfig(() => capturedConfig);
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    pushWizardPersistenceTrace("settings-embed-draft:persisted", {
+      stepId,
+      reason,
+      unitCodes: capturedMeta.unitCodes,
+      sequence: capturedMeta.sequence
+    });
+    return true;
+  };
+  const saveWizardPlatformSettingsStep = async (stepId, settingsSaveLabel) => {
+    const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
+    pushWizardPersistenceTrace("settings-embed-save:requested", {
+      stepId,
+      settingsSaveLabel,
+      hasCallback: Boolean(saveWizardSettings),
+      hasCapturedDraft: Boolean(wizardPlatformSettingsDraftRef.current),
+      capturedMeta: wizardPlatformSettingsDraftMetaRef.current
+    });
+    if (!saveWizardSettings) {
+      const fallbackSaved = await persistCapturedWizardPlatformSettingsDraft(stepId, "missing-callback");
+      if (fallbackSaved) return true;
+      setSaveMessage(`${settingsSaveLabel} is still loading. Try Next again in a moment.`);
+      return false;
+    }
+    const saved = await saveWizardSettings();
+    pushWizardPersistenceTrace("settings-embed-save:callback-result", { stepId, saved });
+    if (!saved) {
+      setSaveMessage(`${settingsSaveLabel} changes were not saved. Review the page before continuing.`);
+      return false;
+    }
+    if (stepId === "callsigns") {
+      await persistCapturedWizardPlatformSettingsDraft(stepId, "after-callback-success");
+    }
+    return true;
+  };
   const goToNextWizardStep = async () => {
     const activeElement = typeof document !== "undefined" ? document.activeElement : null;
     if (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement || activeElement instanceof HTMLSelectElement) {
@@ -42945,41 +43034,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (visibleStep.id === "flying-windows") {
       commitFlyingWindowDrafts();
     }
-    const wizardSettingsSaveSteps = {
-      "resource-row-details": "Resource row setup",
-      "aircraft-configs": "Aircraft CONFIG setup",
-      callsigns: "Callsign settings",
-      "advanced-scheduling-rules": "Scheduling rule settings",
-      access: "User permissions",
-      "deployment-readiness": "Deployment readiness",
-      "operational-runbook": "Support and recovery details",
-      licensing: "Licence details"
-    };
-    const settingsSaveLabel = wizardSettingsSaveSteps[visibleStep.id];
+    const settingsSaveLabel = getWizardSettingsSaveLabel(visibleStep.id);
     if (settingsSaveLabel) {
-      const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
-      if (visibleStep.id === "callsigns") {
-        pushWizardPersistenceTrace("step-19-settings-save:requested", {
-          activeUnitCodes: getWizardActiveUnitCodes(),
-          unitDraftCode: unitDraft.code,
-          currentUnitCode: unitCode
-        });
-      }
-      if (!saveWizardSettings) {
-        setSaveMessage(`${settingsSaveLabel} is still loading. Try Next again in a moment.`);
-        if (visibleStep.id === "callsigns") {
-          pushWizardPersistenceTrace("step-19-settings-save:missing-callback");
-        }
-        return;
-      }
-      const saved = await saveWizardSettings();
-      if (visibleStep.id === "callsigns") {
-        pushWizardPersistenceTrace("step-19-settings-save:result", { saved });
-      }
-      if (!saved) {
-        setSaveMessage(`${settingsSaveLabel} changes were not saved. Review the page before continuing.`);
-        return;
-      }
+      const saved = await saveWizardPlatformSettingsStep(visibleStep.id, settingsSaveLabel);
+      if (!saved) return;
     }
     if (visibleStep.id === "trainee-courses" && unitDraft.hasTrainees) {
       const courseCount = parseWizardLineItems(traineeCourseOptionsDraft).length;
@@ -43038,8 +43096,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (typeof window !== "undefined") window.requestAnimationFrame(() => window.setTimeout(syncStep, 0));
     else syncStep();
   };
-  const goToWizardStep = (nextStep) => {
+  const goToWizardStep = async (nextStep) => {
     const boundedStep = Math.min(steps.length - 1, Math.max(0, nextStep));
+    const settingsSaveLabel = getWizardSettingsSaveLabel(visibleStep.id);
+    if (settingsSaveLabel && boundedStep !== currentStep) {
+      const saved = await saveWizardPlatformSettingsStep(visibleStep.id, settingsSaveLabel);
+      if (!saved) return;
+    }
     pushWizardOrgDiag("wizard:jump-clicked", {
       fromStep: visibleStep.id,
       toStep: steps[boundedStep]?.id,
@@ -43347,7 +43410,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                           type: "button",
                           ref: index === currentStep ? wizardCurrentStepMenuItemRef : void 0,
                           className: wizardStepMenuItemClass(step, index),
-                          onClick: () => goToWizardStep(index),
+                          onClick: () => {
+                            void goToWizardStep(index);
+                          },
                           role: "option",
                           "aria-selected": index === currentStep,
                           children: [
