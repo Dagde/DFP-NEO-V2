@@ -35968,6 +35968,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardShellRef = reactExports.useRef(null);
   const wizardSettingsEmbedRef = reactExports.useRef(null);
   const wizardPlatformSettingsSaveRef = reactExports.useRef(null);
+  const handleWizardPlatformSettingsSaveReady = reactExports.useCallback((save) => {
+    wizardPlatformSettingsSaveRef.current = save;
+  }, []);
   const flyingWindowDraftRef = reactExports.useRef({});
   const wizardAnswerPanelRef = reactExports.useRef(null);
   const wizardDiagnosticStorageKeys = [
@@ -43050,9 +43053,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         scrollTarget,
         sectionOnly: true,
         wizardEditMode: true,
-        onWizardSaveReady: (save) => {
-          wizardPlatformSettingsSaveRef.current = save;
-        },
+        onWizardSaveReady: handleWizardPlatformSettingsSaveReady,
         canUsePlatformPermission,
         activeUnitCode: unitCode || unitDraft.code || "",
         activeUnitCodes: activeUnitCodesForSettings,

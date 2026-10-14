@@ -3671,6 +3671,9 @@ const InitialSetupWizard: React.FC<{
     const wizardShellRef = useRef<HTMLDivElement | null>(null);
     const wizardSettingsEmbedRef = useRef<HTMLDivElement | null>(null);
     const wizardPlatformSettingsSaveRef = useRef<(() => Promise<boolean>) | null>(null);
+    const handleWizardPlatformSettingsSaveReady = useCallback((save: (() => Promise<boolean>) | null) => {
+        wizardPlatformSettingsSaveRef.current = save;
+    }, []);
     const flyingWindowDraftRef = useRef<Record<string, string>>({});
     const wizardAnswerPanelRef = useRef<HTMLDivElement | null>(null);
     const wizardDiagnosticStorageKeys = [
@@ -11999,9 +12002,7 @@ const InitialSetupWizard: React.FC<{
                     scrollTarget={scrollTarget}
                     sectionOnly
                     wizardEditMode
-                    onWizardSaveReady={(save) => {
-                        wizardPlatformSettingsSaveRef.current = save;
-                    }}
+                    onWizardSaveReady={handleWizardPlatformSettingsSaveReady}
                     canUsePlatformPermission={canUsePlatformPermission}
                     activeUnitCode={unitCode || unitDraft.code || ''}
                     activeUnitCodes={activeUnitCodesForSettings}
