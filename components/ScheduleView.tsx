@@ -3679,6 +3679,7 @@ const InitialSetupWizard: React.FC<{
         unitCodes: [],
         sequence: 0,
     });
+    const wizardPlatformSettingsDraftAutosaveTimerRef = useRef<number | null>(null);
     const handleWizardPlatformSettingsSaveReady = useCallback((save: (() => Promise<boolean>) | null) => {
         wizardPlatformSettingsSaveRef.current = save;
     }, []);
@@ -3917,7 +3918,10 @@ const InitialSetupWizard: React.FC<{
             snapshot: compactWizardDiagDetails(getWizardFinishTraceSnapshot()),
             details: compactWizardDiagDetails(details),
         };
-        if (stage.startsWith('settings-embed')) {
+        const shouldMirrorToStep19Trace = stage.startsWith('settings-embed')
+            || entry.snapshot?.visibleStepId === 'callsigns'
+            || details.stepId === 'callsigns';
+        if (shouldMirrorToStep19Trace) {
             try {
                 const existingStepTrace = JSON.parse(window.localStorage.getItem(step19SettingsTraceStorageKey) || '[]');
                 const stepEntry = {
@@ -8357,6 +8361,36 @@ const InitialSetupWizard: React.FC<{
     const wizardStepIdSignature = steps.map((step) => step.id).join('|');
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
+        const persistCapturedStep19DraftSoon = () => {
+            if (!onUpdatePlatformConfig) return;
+            if (wizardPlatformSettingsDraftAutosaveTimerRef.current) {
+                window.clearTimeout(wizardPlatformSettingsDraftAutosaveTimerRef.current);
+            }
+            wizardPlatformSettingsDraftAutosaveTimerRef.current = window.setTimeout(() => {
+                wizardPlatformSettingsDraftAutosaveTimerRef.current = null;
+                const capturedConfig = wizardPlatformSettingsDraftRef.current;
+                const capturedMeta = wizardPlatformSettingsDraftMetaRef.current;
+                if (!capturedConfig || capturedMeta.stepId !== 'callsigns') {
+                    pushWizardPersistenceTrace('settings-embed-draft:autosave-skipped', {
+                        stepId: capturedMeta.stepId,
+                        hasCapturedConfig: Boolean(capturedConfig),
+                        sequence: capturedMeta.sequence,
+                    });
+                    return;
+                }
+                pushWizardPersistenceTrace('settings-embed-draft:autosave-requested', {
+                    stepId: capturedMeta.stepId,
+                    unitCodes: capturedMeta.unitCodes,
+                    sequence: capturedMeta.sequence,
+                });
+                onUpdatePlatformConfig(() => capturedConfig);
+                pushWizardPersistenceTrace('settings-embed-draft:autosave-applied', {
+                    stepId: capturedMeta.stepId,
+                    unitCodes: capturedMeta.unitCodes,
+                    sequence: capturedMeta.sequence,
+                });
+            }, 350);
+        };
         const handlePlatformConfigUpdated = (event: Event) => {
             if (mode !== 'active') return;
             if (visibleStep.id !== 'callsigns') return;
@@ -8373,10 +8407,17 @@ const InitialSetupWizard: React.FC<{
                 unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
                 sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
             });
+            persistCapturedStep19DraftSoon();
         };
         window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
-        return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
-    }, [mode, visibleStep.id]);
+        return () => {
+            window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+            if (wizardPlatformSettingsDraftAutosaveTimerRef.current) {
+                window.clearTimeout(wizardPlatformSettingsDraftAutosaveTimerRef.current);
+                wizardPlatformSettingsDraftAutosaveTimerRef.current = null;
+            }
+        };
+    }, [mode, onUpdatePlatformConfig, visibleStep.id]);
     useEffect(() => {
         if (!isSavedWizardFreshUnitSetup()) return;
         setWizardFreshUnitSetupActive(true);
