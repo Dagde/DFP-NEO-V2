@@ -4257,7 +4257,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addUnitCallsignEntry = () => {
-    const defaultUnit = visibleUnitOptions[0] || config.units.find(isActiveRecord)?.code || config.units[0]?.code || '';
+    const defaultUnit = visibleCallsignUnitOptions[0] || visibleUnitOptions[0] || config.units.find(isActiveRecord)?.code || config.units[0]?.code || '';
     updateUnitCallsignSettings([
       ...unitCallsignSettings.entries,
       {
@@ -4294,20 +4294,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         nextPolicy,
       ],
     );
-  };
-
-  const toggleUnitCallsignPermanentRole = (unitCode: string, roleValue: string) => {
-    const nextUnitCode = String(unitCode || '').trim().toUpperCase();
-    const nextRole = String(roleValue || '').trim().toUpperCase();
-    if (!nextUnitCode || !nextRole) return;
-    const currentPolicy = getUnitCallsignPolicy(unitCallsignSettings, nextUnitCode);
-    const currentRoles = currentPolicy.permanentRoleValues || [];
-    const equivalentRoles = [nextRole];
-    const hasRole = currentRoles.some((role) => equivalentRoles.includes(String(role || '').trim().toUpperCase()));
-    const nextRoles = hasRole
-      ? currentRoles.filter((role) => !equivalentRoles.includes(String(role || '').trim().toUpperCase()))
-      : Array.from(new Set([...currentRoles, nextRole]));
-    updateUnitCallsignPolicy(nextUnitCode, { permanentRoleValues: nextRoles });
   };
 
   const updateCrewCompositionSettings = (
@@ -8980,6 +8966,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     .map((location) => String(location.code || '').trim())
     .filter(Boolean);
   const visibleUnitOptions = visibleUnitRows.map(({ unit }) => unit.code).filter(Boolean);
+  const visibleCallsignUnitOptions = wizardEditMode && activeContextUnitCodes.length > 0
+    ? visibleUnitOptions.filter((unitCode) => activeContextUnitCodes.includes(normaliseUnitCode(unitCode)))
+    : visibleUnitOptions;
   const permissionAccessUnitOptions = configUnits
     .filter((unit) => isActiveRecord(unit))
     .map((unit) => String(unit.code || '').trim())
@@ -8993,36 +8982,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const visibleOperationalModelOptions = settingsVisibilityEnabled && visibleOperationalModelValues.size > 0
     ? OPERATIONAL_MODEL_OPTIONS.filter((option) => visibleOperationalModelValues.has(option.value))
     : OPERATIONAL_MODEL_OPTIONS;
-  const callsignAssignableRoleOptions = (() => {
-    const visibleModelSet = new Set(visibleOperationalModelOptions.map((option) => option.value));
-    const visibleCrewPositions = crewPositionTerminology.positions.filter((entry) => (
-      visibleModelSet.size === 0
-      || visibleOperationalModelOptions.length === OPERATIONAL_MODEL_OPTIONS.length
-      || Array.from(visibleModelSet).some((model) => isCrewPositionAvailableForOperationalModel(entry, model))
-    ));
-    const roleOptions = [
-      { value: 'CONTRACTOR STAFF', label: personnelDisplaySettings.simIpDisplayLabel || 'Contractor Staff' },
-      ...visibleCrewPositions.map((entry) => ({
-        value: entry.genericName,
-        label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName,
-      })),
-      { value: 'CATEGORY:A', label: 'Category A' },
-      { value: 'CATEGORY:B', label: 'Category B' },
-      { value: 'CATEGORY:C', label: 'Category C' },
-      { value: 'CATEGORY:D', label: 'Category D' },
-      { value: 'CATEGORY:UNCAT', label: 'Uncategorised' },
-    ];
-    const byValue = new Map<string, { value: string; label: string }>();
-    roleOptions.forEach((option) => {
-      const value = String(option.value || '').trim();
-      const key = value.toUpperCase();
-      if (!key || byValue.has(key)) return;
-      byValue.set(key, { value, label: option.label || value });
-    });
-    return Array.from(byValue.values()).sort((left, right) => (
-      left.label.localeCompare(right.label, undefined, { sensitivity: 'base' })
-    ));
-  })();
   const visibleCrewCompositionAircraftTypes = settingsVisibilityEnabled
     ? crewCompositionAircraftTypes.filter((aircraft) => {
       const code = normaliseUnitCode(aircraft.code);
@@ -9062,9 +9021,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const visibleDisplayCrewPositionEntries = displayCrewPositionEntries.length > 0
     ? displayCrewPositionEntries
     : crewPositionTerminology.positions;
-  const visibleUnitCallsignEntries = unitCallsignSettings.entries.filter((entry) => isRecordVisibleForSettingsPolicy({
-    unitCode: entry.unitCode,
-  }));
+  const visibleCallsignUnitSet = new Set(visibleCallsignUnitOptions.map(normaliseUnitCode).filter(Boolean));
+  const visibleUnitCallsignEntries = unitCallsignSettings.entries
+    .filter((entry) => (
+      !wizardEditMode
+      || visibleCallsignUnitSet.size === 0
+      || visibleCallsignUnitSet.has(normaliseUnitCode(entry.unitCode))
+    ))
+    .filter((entry) => isRecordVisibleForSettingsPolicy({
+      unitCode: entry.unitCode,
+    }));
   const visibleUserAccessRows = (() => {
     const traceStartedAt = getTraceNow();
     const activeUnitSet = new Set((activeBulkUnitCodes.length > 0 ? activeBulkUnitCodes : [activeSettingsUnitCode]).filter(Boolean));
@@ -14350,65 +14316,33 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h6 className="text-xs font-bold uppercase tracking-wide text-cyan-100">PIC Callsign Source</h6>
+                    <h6 className="text-xs font-bold uppercase tracking-wide text-cyan-100">Callsign Source</h6>
                     <p className="mt-1 text-xs leading-relaxed text-cyan-100/70">
-                      DFP-NEO uses the selected PIC's profile callsign first. If that PIC has no profile callsign, choose how this unit should offer unit callsigns during scheduling.
+                      Choose where the scheduled event callsign comes from for this unit: the selected PIC's staff profile, the unit callsign list, or manual entry by the scheduler.
                     </p>
                   </div>
                 </div>
                 <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {visibleUnitOptions.map((unitCode) => {
+                  {visibleCallsignUnitOptions.map((unitCode) => {
                     const policy = getUnitCallsignPolicy(unitCallsignSettings, unitCode);
                     const unit = config.units.find((candidate: any) => String(candidate.code || '').trim().toUpperCase() === unitCode);
                     const label = `${unitCode}${unit?.name && unit.name !== unitCode ? ` - ${unit.name}` : ''}`;
-                    const selectedPermanentRoles = policy.permanentRoleValues || [];
                     return (
                       <div key={unitCode} className="rounded border border-cyan-300/15 bg-gray-950/50 p-3">
                         <SelectField
-                          label={`${label}: if the PIC has no profile callsign`}
+                          label={`${label} callsign source`}
                           value={policy.allocationMethod}
                           disabled={!canEditRankTerminology}
                           options={UNIT_CALLSIGN_ALLOCATION_METHODS}
                           optionLabels={UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS}
                           onChange={(value) => updateUnitCallsignPolicy(unitCode, { allocationMethod: value as UnitCallsignPolicy['allocationMethod'] })}
                         />
-                        {policy.allocationMethod === 'permanent' && (
-                          <div className="mt-3">
-                            <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-100/80">PIC roles receiving permanent callsigns</div>
-                            <div className="mt-2 grid gap-1.5">
-                              {callsignAssignableRoleOptions.map((option) => {
-                                const value = option.value.trim().toUpperCase();
-                                const equivalentValues = [value];
-                                const isChecked = selectedPermanentRoles.some((role) => equivalentValues.includes(String(role || '').trim().toUpperCase()));
-                                return (
-                                  <label key={`${unitCode}-${value}`} className={`flex items-center gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${
-                                    isChecked
-                                      ? 'border-cyan-400/35 bg-cyan-500/10 text-cyan-50'
-                                      : 'border-gray-700 bg-gray-950 text-gray-400'
-                                  }`}>
-                                    <input
-                                      type="checkbox"
-                                      checked={isChecked}
-                                      disabled={!canEditRankTerminology}
-                                      onChange={() => toggleUnitCallsignPermanentRole(unitCode, option.value)}
-                                      className="h-3.5 w-3.5 accent-cyan-400"
-                                    />
-                                    <span>{option.label}</span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                            <div className="mt-2 text-[11px] leading-snug text-cyan-100/60">
-                              Select the roles that act as PIC for this unit. Staff in those roles receive permanent profile callsigns.
-                            </div>
-                          </div>
-                        )}
                       </div>
                     );
                   })}
-                  {visibleUnitOptions.length === 0 && (
+                  {visibleCallsignUnitOptions.length === 0 && (
                     <div className="rounded border border-gray-700 bg-gray-950 px-3 py-4 text-sm text-gray-400">
-                      No active units are available for callsign assignment.
+                      No active unit is available for callsign source setup.
                     </div>
                   )}
                 </div>
@@ -14431,7 +14365,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         label="Unit"
                         value={entry.unitCode}
                         disabled={!canEditRankTerminology}
-                        options={visibleUnitOptions}
+                        options={visibleCallsignUnitOptions.length > 0 ? visibleCallsignUnitOptions : visibleUnitOptions}
                         onChange={(value) => updateUnitCallsignEntry(entry.id, { unitCode: value.toUpperCase(), isDefault: false })}
                       />
                       <DraftField
@@ -14477,7 +14411,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <FormationCallsignsSection
                 callsigns={formationCallsigns}
                 onUpdateCallsigns={onUpdateFormationCallsigns}
-                units={visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit: any) => unit.code).filter(Boolean)}
+                units={visibleCallsignUnitOptions.length > 0 ? visibleCallsignUnitOptions : visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit: any) => unit.code).filter(Boolean)}
                 locations={(visibleLocationRows.length > 0 ? visibleLocationRows.map(({ location }) => location) : config.locations).map((location: any) => location.name || location.code).filter(Boolean)}
                 locationOptions={(visibleLocationRows.length > 0 ? visibleLocationRows.map(({ location }) => location) : config.locations)
                   .map((location: any) => ({ name: location.name || location.code || '', code: location.code || '' }))

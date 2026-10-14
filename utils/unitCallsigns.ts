@@ -5,7 +5,7 @@ export interface UnitCallsignEntry {
   isDefault?: boolean;
 }
 
-export type UnitCallsignAllocationMethod = 'permanent' | 'per-flight' | 'user-choice';
+export type UnitCallsignAllocationMethod = 'profile-pic' | 'unit-callsign' | 'manual';
 
 export interface UnitCallsignPolicy {
   unitCode: string;
@@ -19,9 +19,9 @@ export interface UnitCallsignSettings {
 }
 
 export const UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS: Record<UnitCallsignAllocationMethod, string> = {
-  permanent: 'Issue permanent PIC callsigns',
-  'per-flight': 'Use unit callsign per flight',
-  'user-choice': 'Scheduler chooses unit callsign',
+  'profile-pic': 'Use PIC profile callsign',
+  'unit-callsign': 'Use unit callsign',
+  manual: 'Manual entry',
 };
 
 export const UNIT_CALLSIGN_ALLOCATION_METHODS = Object.keys(
@@ -39,9 +39,10 @@ const makeUnitCallsignId = (unitCode: string, callsign: string, index: number): 
 
 const normaliseAllocationMethod = (value: unknown): UnitCallsignAllocationMethod => {
   const raw = String(value || '').trim().toLowerCase().replace(/[\s_]+/g, '-');
-  if (raw === 'permanent') return 'permanent';
-  if (raw === 'user-choice' || raw === 'choice') return 'user-choice';
-  return 'per-flight';
+  if (raw === 'profile-pic' || raw === 'profile' || raw === 'pic-profile' || raw === 'permanent') return 'profile-pic';
+  if (raw === 'unit-callsign' || raw === 'unit' || raw === 'per-flight') return 'unit-callsign';
+  if (raw === 'manual' || raw === 'user-choice' || raw === 'choice') return 'manual';
+  return 'profile-pic';
 };
 
 const normaliseRoleValue = (value: unknown): string => String(value || '').trim().toUpperCase();
@@ -131,7 +132,7 @@ export const getUnitCallsignPolicy = (
   const policy = normaliseUnitCallsignSettings(settings).policies.find((entry) => entry.unitCode === unit);
   return {
     unitCode: unit,
-    allocationMethod: policy?.allocationMethod || 'per-flight',
+    allocationMethod: policy?.allocationMethod || 'profile-pic',
     permanentRoleValues: normalisePermanentRoleValues(policy?.permanentRoleValues),
   };
 };

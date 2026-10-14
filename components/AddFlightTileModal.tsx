@@ -29,6 +29,7 @@ import {
   formatUnitCallsignNumber,
   getDefaultUnitCallsign,
   getUnitCallsignEntries,
+  getUnitCallsignPolicy,
   type UnitCallsignSettings,
 } from '../utils/unitCallsigns';
 import {
@@ -2071,6 +2072,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     },
     [activeCallsignUnitCodes, unitCallsignSettings],
   );
+  const activeCallsignPolicy = useMemo(
+    () => getUnitCallsignPolicy(unitCallsignSettings, activeCallsignUnitCodes[0] || activeUnitCode),
+    [activeCallsignUnitCodes, activeUnitCode, unitCallsignSettings],
+  );
+  const callsignAllocationMethod = activeCallsignPolicy.allocationMethod;
   const normalisePersonNameForAddTile = useCallback((value?: string | null): string => (
     String(value || '')
       .replace(/\s+/g, ' ')
@@ -2738,6 +2744,20 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (isSctFormationCode(flightNumber)) return;
     if (!picName) { setCallsign(''); setCallsignOptions([]); return; }
 
+    if (callsignAllocationMethod === 'manual') {
+      setCallsign('');
+      setCallsignOptions([]);
+      return;
+    }
+
+    const unitOptions = unitCallsignEntries.map(entry => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
+    const unitDefaultCallsign = buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber);
+    if (callsignAllocationMethod === 'unit-callsign') {
+      setCallsignOptions(unitOptions);
+      setCallsign(unitDefaultCallsign || unitOptions[0] || '');
+      return;
+    }
+
     // Determine PIC's unit (for filtering formation callsigns)
     let picUnit: string | null = null;
 
@@ -2751,12 +2771,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       const personal  = [primary, secondary].filter(Boolean);
       // Add formation callsigns that belong to the same unit as the PIC
       const formation = (formationCallsigns || []).filter(fc => fc.unit && picUnit && fc.unit === picUnit).map(fc => fc.name || fc.code).filter(Boolean);
-      const unitOptions = selectedPicHasIndividualCallsign ? [] : unitCallsignEntries.map(entry => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
-      const unitDefaultCallsign = buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber);
-      const allOpts   = [...new Set([...personal, ...(selectedPicHasIndividualCallsign ? formation : []), ...unitOptions])];
+      const allOpts   = [...new Set([...personal, ...(selectedPicHasIndividualCallsign ? formation : [])])];
       setCallsignOptions(allOpts);
       const preferredCallsign = selectedLmpEventUsesTestingOfficerSecondaryCallsign && secondary ? secondary : primary;
-      setCallsign(preferredCallsign || unitDefaultCallsign || (allOpts[0] || ''));
+      setCallsign(preferredCallsign || allOpts[0] || '');
       return;
     }
 
@@ -2768,17 +2786,15 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       const personal = cs ? [cs] : [];
       // Add formation callsigns that belong to the same unit as the PIC
       const formation = (formationCallsigns || []).filter(fc => fc.unit && picUnit && fc.unit === picUnit).map(fc => fc.name || fc.code).filter(Boolean);
-      const unitOptions = selectedPicHasIndividualCallsign ? [] : unitCallsignEntries.map(entry => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
-      const unitDefaultCallsign = buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber);
-      const allOpts   = [...new Set([...personal, ...(selectedPicHasIndividualCallsign ? formation : []), ...unitOptions])];
+      const allOpts   = [...new Set([...personal, ...(selectedPicHasIndividualCallsign ? formation : [])])];
       setCallsignOptions(allOpts);
-      setCallsign(cs || unitDefaultCallsign || (allOpts[0] || ''));
+      setCallsign(cs || allOpts[0] || '');
       return;
     }
 
     setCallsign('');
     setCallsignOptions([]);
-  }, [picName, findInstructorByRefOrName, findTraineeByRefOrName, selectedPicRef, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign, resolveTestingOfficerSecondaryCallsign, selectedLmpEventUsesTestingOfficerSecondaryCallsign, flightNumber, isSctFormationCode]);
+  }, [picName, findInstructorByRefOrName, findTraineeByRefOrName, selectedPicRef, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign, resolveTestingOfficerSecondaryCallsign, selectedLmpEventUsesTestingOfficerSecondaryCallsign, flightNumber, isSctFormationCode, callsignAllocationMethod]);
 
   // ── Auto-set duration from selected LMP event ─────────────────────────────
   // (handled in onFlightNumberChange handler — see handleFlightNumberChange below)
@@ -2836,15 +2852,30 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   useEffect(() => {
     if (isSctFormationCode(flightNumber)) return;
-    if (selectedLmpEventUsesTestingOfficerSecondaryCallsign) {
-      const secondary = resolveTestingOfficerSecondaryCallsign(picName, selectedPicRef);
-      if (secondary) {
-        setCallsignOptions(prev => [...new Set([secondary, ...prev])]);
-        setCallsign(secondary);
-      }
+    if (callsignAllocationMethod === 'manual') {
+      setCallsignOptions([]);
+      setCallsign('');
       return;
     }
-    if (selectedPicHasIndividualCallsign && !isFixedCrewModel) return;
+    if (callsignAllocationMethod === 'profile-pic') {
+      if (selectedLmpEventUsesTestingOfficerSecondaryCallsign) {
+        const secondary = resolveTestingOfficerSecondaryCallsign(picName, selectedPicRef);
+        if (secondary) {
+          setCallsignOptions([secondary]);
+          setCallsign(secondary);
+          return;
+        }
+      }
+      const profileCallsign = resolveAssignedCallsign(picName, selectedPicRef);
+      if (profileCallsign) {
+        setCallsignOptions([profileCallsign]);
+        setCallsign(profileCallsign);
+        return;
+      }
+      setCallsignOptions([]);
+      setCallsign('');
+      return;
+    }
     if (!defaultUnitCallsign) {
       setCallsignOptions([]);
       return;
@@ -2853,7 +2884,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const values = unitCallsignEntries.map(entry => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
     setCallsignOptions(values);
     setCallsign(buildUnitEventCallsign(base, unitCallsignNumber));
-  }, [defaultUnitCallsign, flightNumber, isFixedCrewModel, isSctFormationCode, picName, resolveTestingOfficerSecondaryCallsign, selectedLmpEventUsesTestingOfficerSecondaryCallsign, selectedPicHasIndividualCallsign, selectedPicRef, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
+  }, [defaultUnitCallsign, flightNumber, isSctFormationCode, picName, resolveAssignedCallsign, resolveTestingOfficerSecondaryCallsign, selectedLmpEventUsesTestingOfficerSecondaryCallsign, selectedPicRef, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, callsignAllocationMethod]);
 
   useEffect(() => {
     if (!isSingleSeatAircraft) return;

@@ -14734,13 +14734,20 @@ const InitialSetupWizard: React.FC<{
             );
         }
         if (visibleStep.id === 'callsigns') {
+            const wizardCallsignUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
             return promptShell(
                 <p>Set the terminology and callsign rules this unit uses. These are the same Settings records, so changes made here update Settings directly.</p>,
                 renderWizardPlatformSettingsEmbed(
                     'platform-rank-terminology',
                     'platform-unit-callsigns',
                     'Callsign settings saved into Settings.',
-                    { formationCallsigns },
+                    {
+                        activeUnitCode: wizardCallsignUnitCode,
+                        activeUnitCodes: wizardCallsignUnitCode ? [wizardCallsignUnitCode] : [],
+                        activeCompositeUnitCode: wizardCallsignUnitCode,
+                        focusUnitCode: wizardCallsignUnitCode,
+                        formationCallsigns,
+                    },
                 ),
             );
         }
