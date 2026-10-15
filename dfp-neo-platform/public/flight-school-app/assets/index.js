@@ -40324,7 +40324,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       id: "advanced-scheduling-rules",
       title: "Check advanced scheduling rules",
       label: "Advanced rules",
-      body: "Check the detailed event timings and scheduling rule sets used when DFP NEO places events.",
+      body: "Check the detailed event timings and scheduling rules used when DFP NEO places events.",
       checkIds: ["rules"],
       category: "highly-desirable"
     },
@@ -46397,11 +46397,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the current values and refine them later in Settings." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Business rules" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: [
-              wizardField("Rule set", buildRulesDraft.businessRules, (value) => updateBuildRulesDraft((draft) => ({ ...draft, businessRules: value })), void 0, "Use configured rule set"),
-              wizardField("Max dispatch per hour", buildRulesDraft.maxDispatchPerHour, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), void 0, "2")
-            ] })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Dispatch limit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: wizardField("Max dispatch per hour", buildRulesDraft.maxDispatchPerHour, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), void 0, "2") })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Duty limits" }),

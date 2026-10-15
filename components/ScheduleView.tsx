@@ -8430,7 +8430,7 @@ const InitialSetupWizard: React.FC<{
             id: 'advanced-scheduling-rules',
             title: 'Check advanced scheduling rules',
             label: 'Advanced rules',
-            body: 'Check the detailed event timings and scheduling rule sets used when DFP NEO places events.',
+            body: 'Check the detailed event timings and scheduling rules used when DFP NEO places events.',
             checkIds: ['rules'],
             category: 'highly-desirable',
         },
@@ -15335,9 +15335,8 @@ const InitialSetupWizard: React.FC<{
                 <p>Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the current values and refine them later in Settings.</p>,
                 <div className="space-y-4">
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
-                        <p className={wizardSectionHeadingClass}>Business rules</p>
+                        <p className={wizardSectionHeadingClass}>Dispatch limit</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
-                            {wizardField('Rule set', buildRulesDraft.businessRules, (value) => updateBuildRulesDraft((draft) => ({ ...draft, businessRules: value })), undefined, 'Use configured rule set')}
                             {wizardField('Max dispatch per hour', buildRulesDraft.maxDispatchPerHour, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), undefined, '2')}
                         </div>
                     </div>
