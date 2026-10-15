@@ -3929,12 +3929,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     .map((option) => option.label)
     .join(' / ') || 'Complete';
   const insertEventTypes = normaliseInsertEventTypes(
-    primaryOrganisationSettings.insertEventTypes,
+    activeSettingsUnitSettings.insertEventTypes ?? primaryOrganisationSettings.insertEventTypes,
     false,
-    primaryOrganisationSettings.insertEventTimingDefaults,
+    activeSettingsUnitSettings.insertEventTimingDefaults ?? primaryOrganisationSettings.insertEventTimingDefaults,
   );
   const insertEventTimingDefaults = normaliseInsertEventTimingDefaults(
-    primaryOrganisationSettings.insertEventTimingDefaults,
+    activeSettingsUnitSettings.insertEventTimingDefaults ?? primaryOrganisationSettings.insertEventTimingDefaults,
   );
   const taskProfiles = normaliseTaskProfileConfig(
     primaryOrganisationSettings.taskProfiles || null,
@@ -5709,17 +5709,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const updateInsertEventTypes = (nextEventTypes: InsertEventTypeConfig[]) => {
-    updatePrimaryOrganisationSettings((settings) => ({
+    updateActiveUnitSettings((settings) => ({
       ...settings,
       insertEventTypes: normaliseInsertEventTypes(nextEventTypes),
     }));
   };
 
   const updateInsertEventTimingDefaults = (changes: Partial<InsertEventTimingDefaults>) => {
-    updatePrimaryOrganisationSettings((settings) => ({
+    updateActiveUnitSettings((settings) => ({
       ...settings,
       insertEventTimingDefaults: {
-        ...normaliseInsertEventTimingDefaults(settings.insertEventTimingDefaults),
+        ...normaliseInsertEventTimingDefaults(
+          settings.insertEventTimingDefaults ?? primaryOrganisationSettings.insertEventTimingDefaults,
+        ),
         ...changes,
       },
     }));

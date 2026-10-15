@@ -21687,12 +21687,12 @@ const PlatformConfigurationSettings = ({
   );
   const trainingReportCompletionStatusPreview = trainingReportTemplate.completionResults.filter((option) => option.enabled !== false).map((option) => option.label).join(" / ") || "Complete";
   const insertEventTypes = normaliseInsertEventTypes(
-    primaryOrganisationSettings.insertEventTypes,
+    activeSettingsUnitSettings.insertEventTypes ?? primaryOrganisationSettings.insertEventTypes,
     false,
-    primaryOrganisationSettings.insertEventTimingDefaults
+    activeSettingsUnitSettings.insertEventTimingDefaults ?? primaryOrganisationSettings.insertEventTimingDefaults
   );
   const insertEventTimingDefaults = normaliseInsertEventTimingDefaults(
-    primaryOrganisationSettings.insertEventTimingDefaults
+    activeSettingsUnitSettings.insertEventTimingDefaults ?? primaryOrganisationSettings.insertEventTimingDefaults
   );
   const taskProfiles = normaliseTaskProfileConfig(
     primaryOrganisationSettings.taskProfiles || null
@@ -23053,16 +23053,18 @@ This permanently removes the organisation record from platform configuration and
     );
   };
   const updateInsertEventTypes = (nextEventTypes) => {
-    updatePrimaryOrganisationSettings((settings) => ({
+    updateActiveUnitSettings((settings) => ({
       ...settings,
       insertEventTypes: normaliseInsertEventTypes(nextEventTypes)
     }));
   };
   const updateInsertEventTimingDefaults = (changes) => {
-    updatePrimaryOrganisationSettings((settings) => ({
+    updateActiveUnitSettings((settings) => ({
       ...settings,
       insertEventTimingDefaults: {
-        ...normaliseInsertEventTimingDefaults(settings.insertEventTimingDefaults),
+        ...normaliseInsertEventTimingDefaults(
+          settings.insertEventTimingDefaults ?? primaryOrganisationSettings.insertEventTimingDefaults
+        ),
         ...changes
       }
     }));
