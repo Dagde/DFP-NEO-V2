@@ -167,6 +167,7 @@ interface SettingsViewWithMenuProps {
         staffSharingGroups?: Array<{
             id: string;
             name: string;
+            ownerUnitCode?: string;
             selectedUnits: string[];
             enabled?: boolean;
         }>;
@@ -179,6 +180,7 @@ interface SettingsViewWithMenuProps {
         resourceSharingGroups?: Array<{
             id: string;
             name: string;
+            ownerUnitCode?: string;
             selectedUnits: string[];
             allocationMode: 'combined' | 'fixed';
             desiredAllocations: Record<string, number>;
@@ -193,6 +195,7 @@ interface SettingsViewWithMenuProps {
         staffSharingGroups?: Array<{
             id: string;
             name: string;
+            ownerUnitCode?: string;
             selectedUnits: string[];
             enabled?: boolean;
         }>;
@@ -205,6 +208,7 @@ interface SettingsViewWithMenuProps {
         resourceSharingGroups?: Array<{
             id: string;
             name: string;
+            ownerUnitCode?: string;
             selectedUnits: string[];
             allocationMode: 'combined' | 'fixed';
             desiredAllocations: Record<string, number>;

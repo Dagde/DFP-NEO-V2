@@ -33,6 +33,7 @@ interface OrganisationUnitContext {
 interface ResourceSharingGroup {
   id: string;
   name: string;
+  ownerUnitCode?: string;
   selectedUnits: string[];
   allocationMode: AllocationMode;
   desiredAllocations: Record<string, number>;
@@ -43,6 +44,7 @@ interface ResourceSharingGroup {
 interface StaffSharingGroup {
   id: string;
   name: string;
+  ownerUnitCode?: string;
   selectedUnits: string[];
   enabled?: boolean;
 }
@@ -120,6 +122,7 @@ const normaliseStaffSharingGroups = (savedSettings?: OrganisationSettingsSavedSt
     return savedGroups.map((group, index) => ({
       id: group.id || `staff-sharing-${index + 1}`,
       name: group.name || '',
+      ownerUnitCode: group.ownerUnitCode,
       selectedUnits: Array.isArray(group.selectedUnits) ? group.selectedUnits : [],
       enabled: group.enabled !== false,
     }));
@@ -151,6 +154,7 @@ const normaliseResourceSharingGroups = (savedSettings?: OrganisationSettingsSave
     return savedGroups.map((group, index) => ({
       id: group.id || `resource-sharing-${index + 1}`,
       name: group.name || '',
+      ownerUnitCode: group.ownerUnitCode,
       selectedUnits: Array.isArray(group.selectedUnits) ? group.selectedUnits : [],
       allocationMode: group.allocationMode || 'combined',
       desiredAllocations: group.desiredAllocations || {},

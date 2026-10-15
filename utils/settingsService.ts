@@ -151,6 +151,7 @@ export interface AppSettingsData {
     staffSharingGroups?: Array<{
       id: string;
       name: string;
+      ownerUnitCode?: string;
       selectedUnits: string[];
       enabled?: boolean;
     }>;
@@ -163,6 +164,7 @@ export interface AppSettingsData {
     resourceSharingGroups?: Array<{
       id: string;
       name: string;
+      ownerUnitCode?: string;
       selectedUnits: string[];
       allocationMode: 'combined' | 'fixed';
       desiredAllocations: Record<string, number>;
