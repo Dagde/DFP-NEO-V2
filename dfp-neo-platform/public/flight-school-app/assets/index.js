@@ -37162,6 +37162,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     authorizationUrgentMinutes: ""
   });
   const buildRulesDraftDirtyRef = reactExports.useRef(false);
+  const buildRulesDraftUnitRef = reactExports.useRef(normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode));
   const updateBuildRulesDraft = (updater) => {
     buildRulesDraftDirtyRef.current = true;
     setBuildRulesDraft((current) => typeof updater === "function" ? updater(current) : updater);
@@ -37643,22 +37644,58 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const legacyDraft = getSavedWizardUnitString(["alternateCrews", "alternateCrewDraft"]);
     return legacyDraft.trim() ? [{ id: "alternate-crew-draft-1", name: "Alt1", roles: legacyDraft }] : [];
   };
-  const buildHydratedBuildRulesDraft = () => {
+  const buildHydratedBuildRulesDraft = (targetUnitCode) => {
     const targetUnitKey = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
     const ruleSets = Array.isArray(platformConfig?.schedulingRuleSets) ? platformConfig.schedulingRuleSets : [];
     const ruleSet = ruleSets.find((item) => targetUnitKey && normaliseUnitSettingsIdentifier(item?.unitCode) === targetUnitKey && String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && item?.isActive !== false);
+    const savedBuildRulesObject = getSavedWizardUnitObject(["buildRulesDraft"], targetUnitKey);
     if (!ruleSet) {
-      const savedBuildRulesObject = getSavedWizardUnitObject(["buildRulesDraft"]);
       if (Object.keys(savedBuildRulesObject).length > 0) return savedBuildRulesObject;
-      const savedBuildRules = getSavedWizardUnitString(["buildRules", "buildRulesDraftText"]);
-      return savedBuildRules ? parseHydratedBuildRulesDraft(savedBuildRules) : null;
+      const savedBuildRules = getSavedWizardUnitString(["buildRules", "buildRulesDraftText"], targetUnitKey);
+      if (savedBuildRules) return parseHydratedBuildRulesDraft(savedBuildRules);
+      const defaultDispatchStagger = normaliseDispatchStaggerSettings(DEFAULT_DISPATCH_STAGGER_SETTINGS);
+      const defaultTileStatus = normaliseTileStatusSettings(DEFAULT_TILE_STATUS_SETTINGS);
+      return {
+        businessRules: "",
+        maxCrewDutyHours: "",
+        preferredDutyHours: "",
+        aircraftTurnaroundMinutes: "",
+        simTurnaroundMinutes: "",
+        trainerTurnaroundMinutes: "",
+        maxDispatchPerHour: "",
+        maxEventsPerDay: "",
+        maxFlightsPerDay: "",
+        minGapBetweenEventsMinutes: "",
+        flightStaggerMinutes: "",
+        flightStaggerNoMinimum: defaultDispatchStagger.flightNoMinimum ? "Yes" : "No",
+        simulatorStaggerMinutes: "",
+        simulatorStaggerNoMinimum: defaultDispatchStagger.simulatorNoMinimum ? "Yes" : "No",
+        flightAuthorisationRequired: defaultTileStatus.flightAuthorisationRequired ? "Yes" : "No",
+        authorizationWarningMinutes: "",
+        authorizationUrgentMinutes: ""
+      };
     }
     const rules = readPlainWizardObject(ruleSet.rules);
     const eventLimits = readPlainWizardObject(rules.eventLimits || ruleSet.eventLimits);
     const wizardEventLimits = readPlainWizardObject(rules.wizardEventLimits || ruleSet.wizardEventLimits);
     const dailyEventLimits = readPlainWizardObject(rules.dailyEventLimits || ruleSet.dailyEventLimits);
-    const resolvedDispatchStagger = normaliseDispatchStaggerSettings(buildRuleSettings?.dispatchStaggerSettings || dispatchStaggerSettings);
-    const resolvedTileStatus = normaliseTileStatusSettings(tileStatusSettings);
+    const savedDispatchStagger = Object.keys(savedBuildRulesObject).length > 0 ? {
+      flightMinutes: parseNumberDraft(String(savedBuildRulesObject.flightStaggerMinutes ?? ""), DEFAULT_DISPATCH_STAGGER_SETTINGS.flightMinutes),
+      flightNoMinimum: /^yes$/i.test(String(savedBuildRulesObject.flightStaggerNoMinimum || "").trim()),
+      simulatorMinutes: parseNumberDraft(String(savedBuildRulesObject.simulatorStaggerMinutes ?? ""), DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorMinutes),
+      simulatorNoMinimum: /^yes$/i.test(String(savedBuildRulesObject.simulatorStaggerNoMinimum || "").trim())
+    } : null;
+    const savedTileStatus = Object.keys(savedBuildRulesObject).length > 0 ? {
+      flightAuthorisationRequired: !/^no$/i.test(String(savedBuildRulesObject.flightAuthorisationRequired || "").trim()),
+      authorizationWarningMinutes: parseNumberDraft(String(savedBuildRulesObject.authorizationWarningMinutes ?? ""), DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes),
+      authorizationUrgentMinutes: parseNumberDraft(String(savedBuildRulesObject.authorizationUrgentMinutes ?? ""), DEFAULT_TILE_STATUS_SETTINGS.authorizationUrgentMinutes)
+    } : null;
+    const resolvedDispatchStagger = normaliseDispatchStaggerSettings(
+      ruleSet.dispatchStaggerSettings || rules.dispatchStaggerSettings || savedDispatchStagger || buildRuleSettings?.dispatchStaggerSettings || dispatchStaggerSettings
+    );
+    const resolvedTileStatus = normaliseTileStatusSettings(
+      ruleSet.tileStatusSettings || rules.tileStatusSettings || savedTileStatus || tileStatusSettings
+    );
     return {
       businessRules: String(ruleSet.businessRules || ""),
       maxCrewDutyHours: String(ruleSet.maxCrewDutyHours ?? "12"),
@@ -38080,7 +38117,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     JSON.stringify(platformConfig?.unitModules || [])
   ]);
   reactExports.useEffect(() => {
-    if (!normaliseUnitSettingsIdentifier(unitDraft.code)) return;
+    const targetUnitKey = normaliseUnitSettingsIdentifier(unitDraft.code);
+    if (!targetUnitKey) return;
+    const unitChanged = buildRulesDraftUnitRef.current !== targetUnitKey;
+    if (unitChanged) {
+      buildRulesDraftUnitRef.current = targetUnitKey;
+      buildRulesDraftDirtyRef.current = false;
+    }
     const savedUnitDraft = getSavedWizardUnitStepDraft(unitDraft.code);
     if (wizardFreshUnitSetupActive && Object.keys(savedUnitDraft).length === 0 && !getTargetWizardUnit()) return;
     if (!unitModulesDraftDirtyRef.current) setUnitModulesDraft(buildHydratedUnitModulesDraft());
@@ -39532,8 +39575,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       authorizationWarningMinutes: parseNumberDraft(buildRulesDraft.authorizationWarningMinutes, DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes),
       authorizationUrgentMinutes: parseNumberDraft(buildRulesDraft.authorizationUrgentMinutes, DEFAULT_TILE_STATUS_SETTINGS.authorizationUrgentMinutes)
     });
-    onUpdateDispatchStaggerSettings?.(nextDispatchStaggerSettings);
-    onUpdateTileStatusSettings?.(nextTileStatusSettings);
     saveWizardConfig("Build rules saved into Settings.", (baseConfig) => {
       const ruleSets = Array.isArray(baseConfig.schedulingRuleSets) ? baseConfig.schedulingRuleSets : [];
       const existingIndex = ruleSets.findIndex((ruleSet) => targetUnitCode && normaliseUnitSettingsIdentifier(ruleSet?.unitCode) === normaliseUnitSettingsIdentifier(targetUnitCode) && String(ruleSet?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && ruleSet?.isActive !== false);
@@ -39563,12 +39604,16 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         maxEventsPerDay,
         maxFlightsPerDay,
         minGapBetweenEventsMinutes,
+        dispatchStaggerSettings: nextDispatchStaggerSettings,
+        tileStatusSettings: nextTileStatusSettings,
         eventLimits,
         rules: {
           ...existingRules,
           maxEventsPerDay,
           maxFlightsPerDay,
           minGapBetweenEventsMinutes,
+          dispatchStaggerSettings: nextDispatchStaggerSettings,
+          tileStatusSettings: nextTileStatusSettings,
           eventLimits,
           wizardEventLimits: {
             ...readPlainWizardObject(existingRules.wizardEventLimits),
@@ -39598,7 +39643,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         },
         initialSetupWizardDrafts: {
           ...settings.initialSetupWizardDrafts || {},
-          buildRulesDraft: buildRulesDraftText,
+          unitStepDraftsByCode: {
+            ...readPlainWizardObject(settings.initialSetupWizardDrafts?.unitStepDraftsByCode),
+            ...targetUnitCode ? {
+              [normaliseUnitSettingsIdentifier(targetUnitCode)]: {
+                ...readPlainWizardObject(settings.initialSetupWizardDrafts?.unitStepDraftsByCode)?.[normaliseUnitSettingsIdentifier(targetUnitCode)],
+                draftUnitCode: targetUnitCode,
+                buildRulesDraft,
+                buildRulesDraftText
+              }
+            } : {}
+          },
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         }
       }));
