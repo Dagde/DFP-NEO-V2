@@ -5899,7 +5899,6 @@ const InitialSetupWizard: React.FC<{
         activeOrganisation?.settings?.initialSetupWizardDraft?.unitsTodayDraft,
         activeOrganisation?.settings?.initialSetupWizardDrafts?.locationsTodayDraft,
         activeOrganisation?.settings?.initialSetupWizardDraft?.locationsTodayDraft,
-        activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode,
         wizardFreshUnitSetupActive,
     ]);
 
@@ -15891,10 +15890,14 @@ const InitialSetupWizard: React.FC<{
                         const selectedLmp = activeMasterLmpCatalogue.find((lmp: any) => (
                             normaliseUnitSettingsIdentifier(lmp?.code || lmp?.name) === normaliseUnitSettingsIdentifier(value)
                         ));
+                        const nameFollowsCode = !String(draft.lmpName || '').trim()
+                            || draft.lmpName === draft.lmpCode;
                         return {
                             ...draft,
                             lmpCode: value,
-                            lmpName: draft.lmpName || value,
+                            lmpName: selectedLmp
+                                ? String(selectedLmp.name || selectedLmp.code || value)
+                                : nameFollowsCode ? value : draft.lmpName,
                             audience: selectedLmp ? resolveWizardLmpAudience(selectedLmp.audience) : draft.audience,
                         };
                     }), activeMasterLmpCatalogue.map((lmp: any) => String(lmp.code || lmp.name || '')).filter(Boolean), 'Master LMP', 'master-lmp-code')}

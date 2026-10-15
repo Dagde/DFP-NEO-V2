@@ -38109,7 +38109,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     activeOrganisation?.settings?.initialSetupWizardDraft?.unitsTodayDraft,
     activeOrganisation?.settings?.initialSetupWizardDrafts?.locationsTodayDraft,
     activeOrganisation?.settings?.initialSetupWizardDraft?.locationsTodayDraft,
-    activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode,
     wizardFreshUnitSetupActive
   ]);
   reactExports.useEffect(() => {
@@ -46844,10 +46843,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardDataListField("Master LMP code", trainingDraft.lmpCode, (value) => updateTrainingDraft((draft) => {
             const selectedLmp = activeMasterLmpCatalogue.find((lmp) => normaliseUnitSettingsIdentifier(lmp?.code || lmp?.name) === normaliseUnitSettingsIdentifier(value));
+            const nameFollowsCode = !String(draft.lmpName || "").trim() || draft.lmpName === draft.lmpCode;
             return {
               ...draft,
               lmpCode: value,
-              lmpName: draft.lmpName || value,
+              lmpName: selectedLmp ? String(selectedLmp.name || selectedLmp.code || value) : nameFollowsCode ? value : draft.lmpName,
               audience: selectedLmp ? resolveWizardLmpAudience(selectedLmp.audience) : draft.audience
             };
           }), activeMasterLmpCatalogue.map((lmp) => String(lmp.code || lmp.name || "")).filter(Boolean), "Master LMP", "master-lmp-code"),
