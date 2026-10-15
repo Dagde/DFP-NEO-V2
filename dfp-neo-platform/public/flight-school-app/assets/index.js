@@ -37584,7 +37584,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const targetUnitKey = normaliseUnitSettingsIdentifier(getTargetWizardUnitCode());
     return activeUnits.find((unit) => targetUnitKey && normaliseUnitSettingsIdentifier(unit?.code) === targetUnitKey) || null;
   };
-  const getTargetWizardAircraftCode = () => String(resourceDraft.aircraftCode || primaryAircraftType?.code || crewDraft.aircraftCode || "").trim().toUpperCase();
+  const getTargetWizardAircraftCode = () => String(
+    resourceDraft.aircraftCode || crewDraft.aircraftCode || (isSavedWizardFreshUnitSetup() ? "" : primaryAircraftType?.code || "")
+  ).trim().toUpperCase();
   const findWizardAlternateCrewProfiles = (settingsSource = activeOrganisation?.settings, overrides = {}) => {
     const targetUnitKey = normaliseUnitSettingsIdentifier(overrides.unitCode ?? getTargetWizardUnitCode());
     const targetAircraftKey = normaliseUnitSettingsIdentifier(overrides.aircraftCode ?? getTargetWizardAircraftCode());
@@ -37608,7 +37610,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const buildHydratedCrewDraft = () => {
     const targetAircraftKey = normaliseUnitSettingsIdentifier(getTargetWizardAircraftCode());
-    const aircraftType = activeAircraftTypes.find((aircraft) => targetAircraftKey && normaliseUnitSettingsIdentifier(aircraft?.code) === targetAircraftKey) || primaryAircraftType || null;
+    const aircraftType = activeAircraftTypes.find((aircraft) => targetAircraftKey && normaliseUnitSettingsIdentifier(aircraft?.code) === targetAircraftKey) || (isSavedWizardFreshUnitSetup() ? null : primaryAircraftType) || null;
     return {
       aircraftCode: String(aircraftType?.code || getTargetWizardAircraftCode() || resourceDraft.aircraftCode || ""),
       standardSeats: formatRoleRequirementsText(getAircraftStandardSeats(aircraftType))
@@ -37837,8 +37839,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }))) : getSavedWizardUnitString(["currencies", "currencyDraft"]);
   };
   const buildHydratedTrainingRecordsDraft = () => {
-    const template = getTargetWizardUnit()?.settings?.trainingReportTemplate;
-    if (!template) return getSavedWizardUnitString(["trainingRecords", "trainingRecordsDraft"]);
+    const savedDraft = getSavedWizardUnitString(["trainingRecords", "trainingRecordsDraft"]);
+    if (savedDraft) return savedDraft;
+    const template = getTargetWizardUnit()?.settings?.trainingReportTemplate || (isSavedWizardFreshUnitSetup() ? currentUnit?.settings?.trainingReportTemplate : null);
+    if (!template) return "";
     return formatWizardTrainingReportRows([{
       genericName: "Training Report",
       organisationName: String(template.displayName || "Assessment Form"),
@@ -37906,12 +37910,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const buildHydratedScoringPhraseBankDraft = () => {
     const unitPhraseBank = getTargetWizardUnit()?.settings?.trainingReportPhraseBank;
     if (isScoringPhraseBank(unitPhraseBank)) return unitPhraseBank;
+    const savedDraft = getSavedWizardUnitString(["scoringMatrix", "scoringDraft"]);
+    if (savedDraft) return wizardScoringRowsToPhraseBank(savedDraft);
+    const retainedPhraseBank = isSavedWizardFreshUnitSetup() ? currentUnit?.settings?.trainingReportPhraseBank : null;
+    if (isScoringPhraseBank(retainedPhraseBank)) return retainedPhraseBank;
     const organisationPhraseBank = activeOrganisation?.settings?.trainingReportPhraseBank;
     if (isScoringPhraseBank(organisationPhraseBank)) return organisationPhraseBank;
-    const savedDraft = getSavedWizardUnitString(["scoringMatrix", "scoringDraft"]);
-    return wizardScoringRowsToPhraseBank(savedDraft || defaultWizardScoringDraft);
+    return wizardScoringRowsToPhraseBank(defaultWizardScoringDraft);
   };
-  const hydrateSupplementaryWizardDrafts = () => {
+  const hydrateSupplementaryWizardDrafts = (forceUnitReplacement = false) => {
     const savedTraineeCourses = getSavedWizardUnitString(["traineeCourses", "traineeCourseOptionsDraft"]);
     const savedTrainees = getSavedWizardUnitString(["trainees", "traineeDraft"]);
     const savedStaff = getSavedWizardUnitString(["staff", "staffDraft"]);
@@ -37927,27 +37934,28 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const nextScoringPhraseBank = buildHydratedScoringPhraseBankDraft();
     const nextStaffCurrencyEvents = buildHydratedStaffCurrencyEventsDraft();
     const nextDirectedTaskSetups = buildHydratedDirectedTaskSetupsDraft();
-    if (nextCrewLabels) setCrewLabelsDraft(nextCrewLabels);
-    if (!crewDraftDirtyRef.current) {
+    if (forceUnitReplacement || nextCrewLabels) setCrewLabelsDraft(nextCrewLabels || "");
+    if (forceUnitReplacement || !crewDraftDirtyRef.current) {
       setAlternateCrewDrafts(nextAlternateCrewRows);
-      if (nextAlternateCrews) setAlternateCrewDraft(nextAlternateCrews);
+      setAlternateCrewDraft(nextAlternateCrews || "");
     }
-    if (nextBuildRules && !buildRulesDraftDirtyRef.current) setBuildRulesDraft(nextBuildRules);
-    if (savedStaff) setStaffDraft(savedStaff);
-    if (savedTraineeCourses) {
-      setTraineeCourseOptionsDraft(savedTraineeCourses);
-      setTraineeCourseInputRows(parseWizardLineItems(savedTraineeCourses).length > 0 ? parseWizardLineItems(savedTraineeCourses) : [""]);
+    if (nextBuildRules && (forceUnitReplacement || !buildRulesDraftDirtyRef.current)) setBuildRulesDraft(nextBuildRules);
+    if (forceUnitReplacement || savedStaff) setStaffDraft(savedStaff || "");
+    if (forceUnitReplacement || savedTraineeCourses) {
+      const nextCourseRows = parseWizardLineItems(savedTraineeCourses);
+      setTraineeCourseOptionsDraft(savedTraineeCourses || "");
+      setTraineeCourseInputRows(nextCourseRows.length > 0 ? nextCourseRows : [""]);
     }
-    if (savedTrainees) setTraineeDraft(savedTrainees);
-    if (nextTrainingRecords) setTrainingRecordsDraft(nextTrainingRecords);
+    if (forceUnitReplacement || savedTrainees) setTraineeDraft(savedTrainees || "");
+    if (forceUnitReplacement || nextTrainingRecords) setTrainingRecordsDraft(nextTrainingRecords || "");
     if (nextRanksAndLabels) setRankLabelsDraft(nextRanksAndLabels);
     setRankSettingsDraft(nextRankSettings);
     if (nextResourceSharing) setResourceSharingDraft(nextResourceSharing);
-    if (nextCurrencies && !currencyDraftDirtyRef.current) setCurrencyDraft(nextCurrencies);
+    if (forceUnitReplacement || nextCurrencies && !currencyDraftDirtyRef.current) setCurrencyDraft(nextCurrencies || "");
     setWizardScoringPhraseBank(nextScoringPhraseBank);
     setScoringDraft(wizardPhraseBankToScoringDraft(nextScoringPhraseBank));
-    if (nextStaffCurrencyEvents) setStaffCurrencyEventsDraft(nextStaffCurrencyEvents);
-    if (nextDirectedTaskSetups) setDirectedTaskSetupsDraft(nextDirectedTaskSetups);
+    if (forceUnitReplacement || nextStaffCurrencyEvents) setStaffCurrencyEventsDraft(nextStaffCurrencyEvents || "");
+    if (forceUnitReplacement || nextDirectedTaskSetups) setDirectedTaskSetupsDraft(nextDirectedTaskSetups || "");
   };
   const buildHydratedUnitParentDraft = (unitsDraftValue, draft) => {
     const savedWizardUnitParents = String(getSavedInitialSetupWizardDrafts()?.unitParentDraft || "").trim();
@@ -38122,13 +38130,22 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const unitChanged = buildRulesDraftUnitRef.current !== targetUnitKey;
     if (unitChanged) {
       buildRulesDraftUnitRef.current = targetUnitKey;
+      resourceDraftDirtyRef.current = false;
+      crewDraftDirtyRef.current = false;
+      accessDraftDirtyRef.current = false;
+      trainingDraftDirtyRef.current = false;
+      unitModulesDraftDirtyRef.current = false;
       buildRulesDraftDirtyRef.current = false;
+      currencyDraftDirtyRef.current = false;
+      setStaffProfilesCommitted(false);
+      setStaffCommitSummary("");
+      setTraineeAllocationCommitted(false);
+      setTraineeCommitSummary("");
+      setShowMoreTraineesPrompt(false);
     }
-    const savedUnitDraft = getSavedWizardUnitStepDraft(unitDraft.code);
-    if (wizardFreshUnitSetupActive && Object.keys(savedUnitDraft).length === 0 && !getTargetWizardUnit()) return;
     if (!unitModulesDraftDirtyRef.current) setUnitModulesDraft(buildHydratedUnitModulesDraft());
     if (!crewDraftDirtyRef.current) setCrewDraft(buildHydratedCrewDraft());
-    hydrateSupplementaryWizardDrafts();
+    hydrateSupplementaryWizardDrafts(unitChanged);
   }, [
     unitDraft.code,
     activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode,
@@ -38252,7 +38269,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     crewRolesDraftDirtyRef.current = false;
     buildRulesDraftDirtyRef.current = false;
     currencyDraftDirtyRef.current = false;
-  }, [currentUnit?.code, unitCode]);
+  }, [currentUnit?.code, unitCode, unitDraft.code]);
   reactExports.useEffect(() => {
     if (resourceDraftDirtyRef.current) return;
     setResourceDraft((draft) => ({
@@ -38305,29 +38322,34 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   reactExports.useEffect(() => {
     if (accessDraftDirtyRef.current) return;
     const savedDraft = getSavedWizardUnitObject(["accessDraft"]);
+    const targetUnitKey = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+    const targetAccess = activeUserAccess.find((access) => targetUnitKey && normaliseUnitSettingsIdentifier(access?.unitCode || access?.unit) === targetUnitKey) || null;
     setAccessDraft({
-      userName: String(savedDraft.userName || primaryUserAccess?.userName || primaryUserAccess?.user || "New user"),
-      locationCode: sanitiseLegacyWizardLocationCode(savedDraft.locationCode || primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples),
-      unitCode: String(savedDraft.unitCode || primaryUserAccess?.unitCode || primaryUserAccess?.unit || currentUnit?.code || ""),
-      moduleCode: String(savedDraft.moduleCode || primaryUserAccess?.moduleCode || primaryUserAccess?.module || "DFP"),
-      accessLevel: String(savedDraft.accessLevel || primaryUserAccess?.accessLevel || primaryUserAccess?.access || "View")
+      userName: String(savedDraft.userName || targetAccess?.userName || targetAccess?.user || ""),
+      locationCode: sanitiseLegacyWizardLocationCode(savedDraft.locationCode || targetAccess?.locationCode || targetAccess?.location || unitDraft.locationCode || "", shouldIgnoreLegacyWizardLocationSamples),
+      unitCode: String(savedDraft.unitCode || targetAccess?.unitCode || targetAccess?.unit || unitDraft.code || ""),
+      moduleCode: String(savedDraft.moduleCode || targetAccess?.moduleCode || targetAccess?.module || "DFP"),
+      accessLevel: String(savedDraft.accessLevel || targetAccess?.accessLevel || targetAccess?.access || "View")
     });
-  }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.accessDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode, activeOrganisation?.settings?.initialSetupWizardDraft?.accessDraft, primaryUserAccess?.userName, primaryUserAccess?.user, primaryUserAccess?.locationCode, primaryUserAccess?.unitCode, primaryUserAccess?.moduleCode, primaryUserAccess?.accessLevel, primaryUserAccess?.access, currentLocation?.code, currentUnit?.code, unitDraft.code]);
+  }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.accessDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode, activeOrganisation?.settings?.initialSetupWizardDraft?.accessDraft, JSON.stringify(activeUserAccess), currentUnit?.code, unitCode, unitDraft.code, unitDraft.locationCode]);
   reactExports.useEffect(() => {
     if (trainingDraftDirtyRef.current) return;
     const savedDraft = getSavedWizardUnitObject(["trainingDraft"]);
+    const targetUnitKey = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+    const targetRule = activeMasterLmpAccess.find((rule) => targetUnitKey && normaliseUnitSettingsIdentifier(rule?.unitCode || rule?.unit) === targetUnitKey) || null;
+    const targetLmp = activeMasterLmpCatalogue.find((item) => targetRule?.lmpCode && normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(targetRule.lmpCode)) || null;
     setTrainingDraft({
       lmpCode: String(savedDraft.lmpCode || ""),
       lmpName: String(savedDraft.lmpName || ""),
-      description: String(savedDraft.description || primaryMasterLmp?.description || ""),
-      status: String(savedDraft.status || primaryMasterLmp?.status || "ACTIVE"),
-      audience: resolveWizardLmpAudience(savedDraft.audience || primaryMasterLmp?.audience),
-      accessLocationCode: getWizardSetupAccessLocationCode(savedDraft.accessLocationCode || primaryMasterLmpRule?.locationCode),
-      accessUnitCode: getWizardSetupAccessUnitCode(savedDraft.accessUnitCode || primaryMasterLmpRule?.unitCode),
-      accessModel: String(savedDraft.accessModel || primaryMasterLmpRule?.operationalModel || primaryMasterLmpRule?.model || "Any Model"),
-      accessLevel: String(savedDraft.accessLevel || primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || "View")
+      description: String(savedDraft.description || targetLmp?.description || ""),
+      status: String(savedDraft.status || targetLmp?.status || "ACTIVE"),
+      audience: resolveWizardLmpAudience(savedDraft.audience || targetLmp?.audience),
+      accessLocationCode: getWizardSetupAccessLocationCode(savedDraft.accessLocationCode || targetRule?.locationCode),
+      accessUnitCode: getWizardSetupAccessUnitCode(savedDraft.accessUnitCode || targetRule?.unitCode),
+      accessModel: String(savedDraft.accessModel || targetRule?.operationalModel || targetRule?.model || "Any Model"),
+      accessLevel: String(savedDraft.accessLevel || targetRule?.access || targetRule?.accessLevel || "View")
     });
-  }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.trainingDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode, activeOrganisation?.settings?.initialSetupWizardDraft?.trainingDraft, activeWizardLocationCode, primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmp?.audience, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.operationalModel, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code, unitDraft.code, unitDraft.locationCode, locationDraft.code, defaultWizardLmpAudience]);
+  }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.trainingDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode, activeOrganisation?.settings?.initialSetupWizardDraft?.trainingDraft, JSON.stringify(activeMasterLmpCatalogue), JSON.stringify(activeMasterLmpAccess), activeWizardLocationCode, currentLocation?.code, currentUnit?.code, unitCode, unitDraft.code, unitDraft.locationCode, locationDraft.code, defaultWizardLmpAudience]);
   reactExports.useEffect(() => {
     if (crewRolesDraftDirtyRef.current) return;
     const savedCrewRoles = getSavedWizardString("crewRoles", "crewRolesDraft");
@@ -38387,7 +38409,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       currencyDraft,
       scoringDraft: scoringDraftToSave,
       staffCurrencyEventsDraft,
-      directedTaskSetupsDraft
+      directedTaskSetupsDraft,
+      groundEventSchedulingSettings: wizardGroundEventSchedulingSettingsForDisplay
     };
     const unitStepDraftsByCode = resourceDraftUnitKey ? { ...existingUnitStepDraftsByCode, [resourceDraftUnitKey]: currentUnitStepDraft } : existingUnitStepDraftsByCode;
     return {
@@ -38561,30 +38584,62 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       groups: normalised.groups.filter((group) => group.name.trim() || group.eventCodes.length > 0 || group.mode !== "manual" || group.preferredWindows.length > 0)
     });
   }, []);
-  const wizardBaseGroundEventSchedulingSettings = reactExports.useMemo(() => normaliseGroundEventSchedulingSettings(
-    groundEventSchedulingSettings || activeOrganisation?.settings?.groundEventSchedulingSettings || DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS
-  ), [groundEventSchedulingSettings, activeOrganisation?.settings?.groundEventSchedulingSettings]);
+  const wizardBaseGroundEventSchedulingSettings = reactExports.useMemo(() => {
+    const targetUnitSettings = getTargetWizardUnit()?.settings?.groundEventSchedulingSettings;
+    const savedUnitSettings = getSavedWizardUnitObject(["groundEventSchedulingSettings"]);
+    const hasSavedUnitSettings = Object.keys(savedUnitSettings).length > 0;
+    return normaliseGroundEventSchedulingSettings(
+      targetUnitSettings || (hasSavedUnitSettings ? savedUnitSettings : null) || groundEventSchedulingSettings || activeOrganisation?.settings?.groundEventSchedulingSettings || DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS
+    );
+  }, [
+    unitDraft.code,
+    groundEventSchedulingSettings,
+    activeOrganisation?.settings?.groundEventSchedulingSettings,
+    activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode,
+    JSON.stringify(activeUnits.map((unit) => [unit?.code, unit?.settings?.groundEventSchedulingSettings]))
+  ]);
   const wizardGroundEventSchedulingSettingsForDisplay = reactExports.useMemo(() => materialiseWizardGroundEventSchedulingSettings(wizardBaseGroundEventSchedulingSettings), [materialiseWizardGroundEventSchedulingSettings, wizardBaseGroundEventSchedulingSettings]);
   const wizardGroundEventSchedulingGroups = wizardGroundEventSchedulingSettingsForDisplay.groups;
   const persistWizardGroundEventSchedulingSettings = reactExports.useCallback((settings, message = "Ground event scheduling saved into Settings.") => {
     const savedSettings = materialiseWizardGroundEventSchedulingSettings(settings);
-    onUpdateGroundEventSchedulingSettings?.(savedSettings);
-    saveWizardConfig(message, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (existingSettings) => ({
-      ...existingSettings,
-      groundEventSchedulingSettings: savedSettings,
-      initialSetupWizardDraft: {
-        ...existingSettings.initialSetupWizardDraft || {},
-        groundEventSchedulingSettings: savedSettings,
-        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-      },
-      initialSetupWizardDrafts: {
-        ...existingSettings.initialSetupWizardDrafts || {},
-        groundEventSchedulingSettings: savedSettings,
-        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-      }
-    })), { silent: message.length === 0 });
+    const targetUnitKey = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+    if (targetUnitKey === normaliseUnitSettingsIdentifier(currentUnit?.code || unitCode)) {
+      onUpdateGroundEventSchedulingSettings?.(savedSettings);
+    }
+    saveWizardConfig(message, (baseConfig) => {
+      const nextUnits = (baseConfig?.units || []).map((unit) => normaliseUnitSettingsIdentifier(unit?.code) === targetUnitKey ? {
+        ...unit,
+        settings: {
+          ...unit.settings || {},
+          groundEventSchedulingSettings: savedSettings
+        }
+      } : unit);
+      return updatePrimaryOrganisationWithSettings({ ...baseConfig, units: nextUnits }, (existingSettings) => {
+        const existingDrafts = existingSettings.initialSetupWizardDrafts || {};
+        const existingByUnit = readPlainWizardObject(existingDrafts.unitStepDraftsByCode);
+        return {
+          ...existingSettings,
+          initialSetupWizardDraft: {
+            ...existingSettings.initialSetupWizardDraft || {},
+            groundEventSchedulingSettings: savedSettings,
+            updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+          },
+          initialSetupWizardDrafts: {
+            ...existingDrafts,
+            unitStepDraftsByCode: targetUnitKey ? {
+              ...existingByUnit,
+              [targetUnitKey]: {
+                ...readPlainWizardObject(existingByUnit[targetUnitKey]),
+                groundEventSchedulingSettings: savedSettings
+              }
+            } : existingByUnit,
+            updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+          }
+        };
+      });
+    }, { silent: message.length === 0 });
     return savedSettings;
-  }, [materialiseWizardGroundEventSchedulingSettings, onUpdateGroundEventSchedulingSettings, saveWizardConfig]);
+  }, [materialiseWizardGroundEventSchedulingSettings, onUpdateGroundEventSchedulingSettings, saveWizardConfig, unitDraft.code, currentUnit?.code, unitCode]);
   const updateWizardGroundEventSchedulingGroup = (groupId, updates) => {
     const current = materialiseWizardGroundEventSchedulingSettings(wizardGroundEventSchedulingSettingsForDisplay);
     persistWizardGroundEventSchedulingSettings({
@@ -39955,12 +40010,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
       const accessRules = getOrganisationMasterLmpAccessRules(settings);
       const catalogueExists = catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(lmpCode));
-      const ruleKey = primaryMasterLmpRule?.id || "";
+      const targetUnitKey = normaliseUnitSettingsIdentifier(getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode));
+      const existingCatalogueEntry = catalogue.find((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(lmpCode));
+      const existingTargetRule = accessRules.find((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(lmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode || rule?.unit) === targetUnitKey);
+      const ruleKey = existingTargetRule?.id || "";
       const audience = resolveWizardLmpAudience(trainingDraft.audience);
       const accessLocationCode = getWizardSetupAccessLocationCode(trainingDraft.accessLocationCode || primaryMasterLmpRule?.locationCode);
       const accessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode || primaryMasterLmpRule?.unitCode);
       const nextCatalogueEntry = {
-        id: primaryMasterLmp?.id || createWizardRecordId("master-lmp-catalogue"),
+        id: existingCatalogueEntry?.id || createWizardRecordId("master-lmp-catalogue"),
         code: lmpCode,
         name: trainingDraft.lmpName || lmpCode,
         description: trainingDraft.description,
@@ -39968,7 +40026,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         audience
       };
       const nextRule = {
-        id: primaryMasterLmpRule?.id || createWizardRecordId("master-lmp-access"),
+        id: existingTargetRule?.id || createWizardRecordId("master-lmp-access"),
         lmpCode,
         locationCode: accessLocationCode,
         unitCode: accessUnitCode,
@@ -39985,58 +40043,87 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const saveWizardSupplementaryDrafts = (message = "This step has been synced into Settings.") => {
     const scoringDraftToSave = wizardPhraseBankToScoringDraft(wizardScoringPhraseBank);
-    saveWizardConfig(message, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
-      ...settings,
-      initialSetupWizardDraft: {
-        ...settings.initialSetupWizardDraft || {},
-        unitsToday: parseWizardUnitRows(unitsTodayDraft),
-        unitDraft,
-        unitDraftsByCode: getWizardUnitDraftMapWithCurrent(),
-        locationsToday: parseWizardLocationRows(locationsTodayDraft),
-        unitParents: unitParentDraft,
-        crewLabels: crewLabelsDraft,
-        alternateCrews: alternateCrewDraft,
-        alternateCrewDrafts: getWizardAlternateCrewDraftRowsForSave(),
-        buildRules: buildRulesDraftText,
-        trainingRecords: trainingRecordsDraft,
-        unitModules: unitModulesDraft,
-        ranksAndLabels: rankLabelsDraft,
-        rankSettings: rankSettingsDraft,
-        crewRoles: crewRolesDraft,
-        resourceSharing: resourceSharingDraft,
-        currencies: currencyDraft,
-        scoringMatrix: scoringDraftToSave,
-        staffCurrencyEvents: staffCurrencyEventsDraft,
-        directedTaskSetups: directedTaskSetupsDraft,
-        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-      },
-      initialSetupWizardDrafts: {
-        ...settings.initialSetupWizardDrafts || {},
-        organisationDraft,
-        unitsTodayDraft,
-        locationsTodayDraft,
-        unitParentDraft,
+    const targetUnitKey = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+    saveWizardConfig(message, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+      const existingDrafts = settings.initialSetupWizardDrafts || {};
+      const existingByUnit = readPlainWizardObject(existingDrafts.unitStepDraftsByCode);
+      const unitDraftPatch = {
+        ...readPlainWizardObject(existingByUnit[targetUnitKey]),
+        draftUnitCode: targetUnitKey,
+        crewDraft,
+        accessDraft,
+        trainingDraft,
         crewLabelsDraft,
         alternateCrewDraft,
         alternateCrewDrafts: getWizardAlternateCrewDraftRowsForSave(),
-        buildRulesDraft: buildRulesDraftText,
+        buildRulesDraft,
+        buildRulesDraftText,
         staffDraft,
         traineeCourses: traineeCourseOptionsDraft,
         traineeCourseOptionsDraft,
         traineeDraft,
         trainingRecordsDraft,
         unitModulesDraft,
-        rankLabelsDraft,
-        rankSettingsDraft,
-        crewRolesDraft,
-        resourceSharingDraft,
         currencyDraft,
         scoringDraft: scoringDraftToSave,
         staffCurrencyEventsDraft,
         directedTaskSetupsDraft,
-        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-      }
-    })));
+        groundEventSchedulingSettings: wizardGroundEventSchedulingSettingsForDisplay
+      };
+      return {
+        ...settings,
+        initialSetupWizardDraft: {
+          ...settings.initialSetupWizardDraft || {},
+          unitsToday: parseWizardUnitRows(unitsTodayDraft),
+          unitDraft,
+          unitDraftsByCode: getWizardUnitDraftMapWithCurrent(),
+          locationsToday: parseWizardLocationRows(locationsTodayDraft),
+          unitParents: unitParentDraft,
+          crewLabels: crewLabelsDraft,
+          alternateCrews: alternateCrewDraft,
+          alternateCrewDrafts: getWizardAlternateCrewDraftRowsForSave(),
+          buildRules: buildRulesDraftText,
+          trainingRecords: trainingRecordsDraft,
+          unitModules: unitModulesDraft,
+          ranksAndLabels: rankLabelsDraft,
+          rankSettings: rankSettingsDraft,
+          crewRoles: crewRolesDraft,
+          resourceSharing: resourceSharingDraft,
+          currencies: currencyDraft,
+          scoringMatrix: scoringDraftToSave,
+          staffCurrencyEvents: staffCurrencyEventsDraft,
+          directedTaskSetups: directedTaskSetupsDraft,
+          updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+        },
+        initialSetupWizardDrafts: {
+          ...existingDrafts,
+          organisationDraft,
+          unitsTodayDraft,
+          locationsTodayDraft,
+          unitParentDraft,
+          crewLabelsDraft,
+          alternateCrewDraft,
+          alternateCrewDrafts: getWizardAlternateCrewDraftRowsForSave(),
+          buildRulesDraft: buildRulesDraftText,
+          staffDraft,
+          traineeCourses: traineeCourseOptionsDraft,
+          traineeCourseOptionsDraft,
+          traineeDraft,
+          trainingRecordsDraft,
+          unitModulesDraft,
+          rankLabelsDraft,
+          rankSettingsDraft,
+          crewRolesDraft,
+          resourceSharingDraft,
+          currencyDraft,
+          scoringDraft: scoringDraftToSave,
+          staffCurrencyEventsDraft,
+          directedTaskSetupsDraft,
+          unitStepDraftsByCode: targetUnitKey ? { ...existingByUnit, [targetUnitKey]: unitDraftPatch } : existingByUnit,
+          updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+        }
+      };
+    }));
   };
   const parseWizardUnitModuleDraftRows = () => {
     const rows = parseWizardPipeRows(unitModulesDraft, ["module", "enabled"]);
@@ -41958,7 +42045,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const hydratedUnits = buildHydratedUnitsTodayDraft();
     const hydratedUnitParents = buildHydratedUnitParentDraft(hydratedUnits, hydratedOrganisation);
     const hydratedLocations = buildHydratedLocationsTodayDraft();
-    const hydratedLocationDraft = buildHydratedLocationDraft();
+    const selectedLocationCode = sanitiseLegacyWizardLocationCode(selectedUnit?.locationCode || "", shouldIgnoreLegacyWizardLocationSamples);
+    const selectedLocation = activeWizardLocations.find((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(selectedLocationCode));
+    const selectedLocationProfile = selectedLocation ? normaliseWizardLocationProfile(selectedLocation) : findWizardLocationProfile(selectedLocationCode);
+    const hydratedLocationDraft = selectedLocationCode ? {
+      code: selectedLocationProfile?.icao || selectedLocationCode,
+      iataCode: selectedLocationProfile?.iata || "",
+      name: selectedLocationProfile?.name || selectedLocationCode,
+      timezone: selectedLocationProfile?.timezone || "",
+      latitude: selectedLocationProfile?.latitude != null ? String(selectedLocationProfile.latitude) : "",
+      longitude: selectedLocationProfile?.longitude != null ? String(selectedLocationProfile.longitude) : "",
+      trainingAreas: Array.isArray(selectedLocation?.trainingAreas) ? selectedLocation.trainingAreas.map((item) => String(item || "").trim()).filter(Boolean).join(", ") : ""
+    } : buildHydratedLocationDraft();
     const selectedRow = parseWizardUnitRows(hydratedUnits).find((row) => normaliseUnitSettingsIdentifier(row.code) === cleanCode) || {
       code: String(selectedUnit?.code || selectedCode || "").trim().toUpperCase(),
       name: String(selectedUnit?.name || selectedUnit?.code || selectedCode || "").trim()
@@ -44631,6 +44729,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           settings: {
             operationalModel: draft.operationalModel,
             hasTrainees: draft.hasTrainees,
+            groundEventSchedulingSettings: setupGroundEventSchedulingSettings,
             ...setupWizardCompletionAt ? { initialSetupWizardCompletedAt: setupWizardCompletionAt } : {},
             parentOrganisationPath: unitParentPaths[normaliseUnitSettingsIdentifier(row.code)] || fallbackUnitParentPath,
             trainingReportTemplate: trainingReportRow ? {
@@ -45376,84 +45475,100 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       });
     }
     const finalGroundEventSchedulingSettings = compactWizardGroundEventSchedulingSettingsForSave(wizardGroundEventSchedulingSettingsForDisplay);
-    onUpdateGroundEventSchedulingSettings?.(finalGroundEventSchedulingSettings);
-    saveWizardConfig("Setup saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(
-      stampWizardCompletedUnitsInConfig(baseConfig, unitRows, completedAt),
-      (settings) => {
-        const cleanLmpCode = String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim();
-        const cleanLmpName = String(trainingDraft.lmpName || cleanLmpCode).trim();
-        const cleanAccessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode);
-        const cleanAccessLocationCode = getWizardSetupAccessLocationCode(trainingDraft.accessLocationCode);
-        const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
-        const accessRules = getOrganisationMasterLmpAccessRules(settings);
-        const catalogueExists = cleanLmpCode && catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
-        const accessExists = cleanLmpCode && accessRules.some((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(cleanAccessUnitCode));
-        const nextCatalogueEntry = cleanLmpCode ? {
-          id: primaryMasterLmp?.id || createWizardRecordId("master-lmp-catalogue"),
-          code: cleanLmpCode,
-          name: cleanLmpName || cleanLmpCode,
-          description: trainingDraft.description,
-          status: trainingDraft.status || "ACTIVE",
-          audience: resolveWizardLmpAudience(trainingDraft.audience)
-        } : null;
-        const nextAccessRule = cleanLmpCode ? {
-          id: createWizardRecordId("master-lmp-access"),
-          lmpCode: cleanLmpCode,
-          locationCode: cleanAccessLocationCode,
-          unitCode: cleanAccessUnitCode,
-          operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel || null,
-          accessLevel: trainingDraft.accessLevel || "Manage",
-          status: "ACTIVE"
-        } : null;
-        const correctedTrainingDraft = {
-          ...trainingDraft,
-          accessLocationCode: cleanAccessLocationCode,
-          accessUnitCode: cleanAccessUnitCode
-        };
-        return {
-          ...settings,
-          masterLmpCatalogue: !nextCatalogueEntry ? catalogue : catalogueExists ? catalogue.map((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) ? { ...item, ...nextCatalogueEntry } : item) : [...catalogue, nextCatalogueEntry],
-          masterLmpAccess: !nextAccessRule ? accessRules : accessExists ? accessRules.map((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(cleanAccessUnitCode) ? { ...rule, ...nextAccessRule, id: rule.id || nextAccessRule.id } : rule) : [
-            ...accessRules.filter((rule) => !(normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) !== normaliseUnitSettingsIdentifier(cleanAccessUnitCode) && normaliseUnitSettingsIdentifier(rule?.locationCode) === normaliseUnitSettingsIdentifier(cleanAccessLocationCode))),
-            nextAccessRule
-          ],
-          initialSetupWizardCompletedAt: completedAt,
-          personnelDisplaySettings: buildRankSettingsToSave(settings),
-          groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
-          initialSetupWizardDraft: {
-            unitsToday: parseWizardUnitRows(unitsTodayDraft),
-            locationsToday: parseWizardLocationRows(locationsTodayDraft),
-            unitParents: unitParentDraft,
-            crewLabels: crewLabelsDraft,
-            alternateCrews: alternateCrewDraft,
-            buildRules: buildRulesDraftText,
-            staff: staffDraft,
-            traineesEnabled: unitDraft.hasTrainees,
-            traineeCourses: traineeCourseOptionsDraft,
-            trainees: traineeDraft,
-            trainingRecords: trainingRecordsDraft,
-            unitModules: unitModulesDraft,
-            ranksAndLabels: rankLabelsDraft,
-            rankSettings: rankSettingsDraft,
-            resourceSharing: resourceSharingDraft,
-            currencies: currencyDraft,
-            groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
-            scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
-            staffCurrencyEvents: staffCurrencyEventsDraft,
-            trainingDraft: correctedTrainingDraft,
-            setupMode: "existing-unit",
-            completedAt
-          },
-          initialSetupWizardDrafts: {
-            ...settings.initialSetupWizardDrafts || {},
-            groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
-            trainingDraft: correctedTrainingDraft,
-            setupMode: "existing-unit",
-            completedAt
+    const finalGroundEventUnitKey = normaliseUnitSettingsIdentifier(getTargetWizardUnitCode());
+    if (finalGroundEventUnitKey === normaliseUnitSettingsIdentifier(unitCode)) {
+      onUpdateGroundEventSchedulingSettings?.(finalGroundEventSchedulingSettings);
+    }
+    saveWizardConfig("Setup saved into Settings.", (baseConfig) => {
+      const completedConfig = stampWizardCompletedUnitsInConfig(baseConfig, unitRows, completedAt);
+      const configWithUnitGroundEventSettings = {
+        ...completedConfig,
+        units: (Array.isArray(completedConfig?.units) ? completedConfig.units : []).map((unit) => normaliseUnitSettingsIdentifier(unit?.code) === finalGroundEventUnitKey ? {
+          ...unit,
+          settings: {
+            ...unit?.settings || {},
+            groundEventSchedulingSettings: finalGroundEventSchedulingSettings
           }
-        };
-      }
-    ));
+        } : unit)
+      };
+      return updatePrimaryOrganisationWithSettings(
+        configWithUnitGroundEventSettings,
+        (settings) => {
+          const cleanLmpCode = String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim();
+          const cleanLmpName = String(trainingDraft.lmpName || cleanLmpCode).trim();
+          const cleanAccessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode);
+          const cleanAccessLocationCode = getWizardSetupAccessLocationCode(trainingDraft.accessLocationCode);
+          const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+          const accessRules = getOrganisationMasterLmpAccessRules(settings);
+          const catalogueExists = cleanLmpCode && catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
+          const accessExists = cleanLmpCode && accessRules.some((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(cleanAccessUnitCode));
+          const nextCatalogueEntry = cleanLmpCode ? {
+            id: primaryMasterLmp?.id || createWizardRecordId("master-lmp-catalogue"),
+            code: cleanLmpCode,
+            name: cleanLmpName || cleanLmpCode,
+            description: trainingDraft.description,
+            status: trainingDraft.status || "ACTIVE",
+            audience: resolveWizardLmpAudience(trainingDraft.audience)
+          } : null;
+          const nextAccessRule = cleanLmpCode ? {
+            id: createWizardRecordId("master-lmp-access"),
+            lmpCode: cleanLmpCode,
+            locationCode: cleanAccessLocationCode,
+            unitCode: cleanAccessUnitCode,
+            operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel || null,
+            accessLevel: trainingDraft.accessLevel || "Manage",
+            status: "ACTIVE"
+          } : null;
+          const correctedTrainingDraft = {
+            ...trainingDraft,
+            accessLocationCode: cleanAccessLocationCode,
+            accessUnitCode: cleanAccessUnitCode
+          };
+          return {
+            ...settings,
+            masterLmpCatalogue: !nextCatalogueEntry ? catalogue : catalogueExists ? catalogue.map((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) ? { ...item, ...nextCatalogueEntry } : item) : [...catalogue, nextCatalogueEntry],
+            masterLmpAccess: !nextAccessRule ? accessRules : accessExists ? accessRules.map((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(cleanAccessUnitCode) ? { ...rule, ...nextAccessRule, id: rule.id || nextAccessRule.id } : rule) : [
+              ...accessRules.filter((rule) => !(normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) !== normaliseUnitSettingsIdentifier(cleanAccessUnitCode) && normaliseUnitSettingsIdentifier(rule?.locationCode) === normaliseUnitSettingsIdentifier(cleanAccessLocationCode))),
+              nextAccessRule
+            ],
+            initialSetupWizardCompletedAt: completedAt,
+            personnelDisplaySettings: buildRankSettingsToSave(settings),
+            groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
+            initialSetupWizardDraft: {
+              unitsToday: parseWizardUnitRows(unitsTodayDraft),
+              locationsToday: parseWizardLocationRows(locationsTodayDraft),
+              unitParents: unitParentDraft,
+              crewLabels: crewLabelsDraft,
+              alternateCrews: alternateCrewDraft,
+              buildRules: buildRulesDraftText,
+              staff: staffDraft,
+              traineesEnabled: unitDraft.hasTrainees,
+              traineeCourses: traineeCourseOptionsDraft,
+              trainees: traineeDraft,
+              trainingRecords: trainingRecordsDraft,
+              unitModules: unitModulesDraft,
+              ranksAndLabels: rankLabelsDraft,
+              rankSettings: rankSettingsDraft,
+              resourceSharing: resourceSharingDraft,
+              currencies: currencyDraft,
+              groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
+              scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
+              staffCurrencyEvents: staffCurrencyEventsDraft,
+              trainingDraft: correctedTrainingDraft,
+              setupMode: "existing-unit",
+              completedAt
+            },
+            initialSetupWizardDrafts: {
+              ...settings.initialSetupWizardDrafts || {},
+              groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
+              trainingDraft: correctedTrainingDraft,
+              setupMode: "existing-unit",
+              completedAt
+            }
+          };
+        }
+      );
+    });
     setCompletedWizardStepIds(new Set(steps.map((step) => step.id)));
     if (typeof window !== "undefined") {
       safeSetWizardLocalStorage(initialSetupWizardCompletedStepsStorageKey, JSON.stringify(steps.map((step) => step.id)));
