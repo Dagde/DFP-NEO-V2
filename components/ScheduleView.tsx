@@ -3674,10 +3674,11 @@ const InitialSetupWizard: React.FC<{
     const wizardSettingsEmbedRef = useRef<HTMLDivElement | null>(null);
     const wizardPlatformSettingsSaveRef = useRef<(() => Promise<boolean>) | null>(null);
     const wizardPlatformSettingsDraftRef = useRef<any | null>(null);
-    const wizardPlatformSettingsDraftMetaRef = useRef<{ stepId: string; unitCodes: string[]; sequence: number }>({
+    const wizardPlatformSettingsDraftMetaRef = useRef<{ stepId: string; unitCodes: string[]; sequence: number; contextKey: string }>({
         stepId: '',
         unitCodes: [],
         sequence: 0,
+        contextKey: '',
     });
     const wizardPlatformSettingsDraftAutosaveTimerRef = useRef<number | null>(null);
     const handleWizardPlatformSettingsSaveReady = useCallback((save: (() => Promise<boolean>) | null) => {
@@ -8652,6 +8653,21 @@ const InitialSetupWizard: React.FC<{
             matchingUnits: units,
         };
     };
+    const wizardPlatformSettingsContextUnitCode = normaliseUnitSettingsIdentifier(unitDraft.code || unitCode || '') || 'unassigned-unit';
+    const wizardPlatformSettingsContextKey = `${wizardFreshUnitSetupActive ? 'new-unit' : 'existing-unit'}:${wizardPlatformSettingsContextUnitCode}`;
+    useEffect(() => {
+        if (typeof window !== 'undefined' && wizardPlatformSettingsDraftAutosaveTimerRef.current) {
+            window.clearTimeout(wizardPlatformSettingsDraftAutosaveTimerRef.current);
+            wizardPlatformSettingsDraftAutosaveTimerRef.current = null;
+        }
+        wizardPlatformSettingsDraftRef.current = null;
+        wizardPlatformSettingsDraftMetaRef.current = {
+            stepId: '',
+            unitCodes: [],
+            sequence: 0,
+            contextKey: wizardPlatformSettingsContextKey,
+        };
+    }, [wizardPlatformSettingsContextKey]);
     const scheduleCapturedStep19DraftAutosave = useCallback(() => {
         if (typeof window === 'undefined') return;
         if (!onUpdatePlatformConfig) return;
@@ -8662,11 +8678,15 @@ const InitialSetupWizard: React.FC<{
             wizardPlatformSettingsDraftAutosaveTimerRef.current = null;
             const capturedConfig = wizardPlatformSettingsDraftRef.current;
             const capturedMeta = wizardPlatformSettingsDraftMetaRef.current;
-            if (!capturedConfig || capturedMeta.stepId !== 'callsigns') {
+            const matchesContext = capturedMeta.contextKey === wizardPlatformSettingsContextKey;
+            if (!capturedConfig || capturedMeta.stepId !== 'callsigns' || !matchesContext) {
                 pushWizardPersistenceTrace('settings-embed-draft:autosave-skipped', {
                     stepId: capturedMeta.stepId,
                     hasCapturedConfig: Boolean(capturedConfig),
                     sequence: capturedMeta.sequence,
+                    capturedContextKey: capturedMeta.contextKey,
+                    currentContextKey: wizardPlatformSettingsContextKey,
+                    matchesContext,
                     step19Summary: summariseWizardStep19Config(capturedConfig),
                 });
                 return;
@@ -8675,6 +8695,7 @@ const InitialSetupWizard: React.FC<{
                 stepId: capturedMeta.stepId,
                 unitCodes: capturedMeta.unitCodes,
                 sequence: capturedMeta.sequence,
+                contextKey: capturedMeta.contextKey,
                 step19Summary: summariseWizardStep19Config(capturedConfig),
             });
             onUpdatePlatformConfig(() => capturedConfig);
@@ -8682,10 +8703,11 @@ const InitialSetupWizard: React.FC<{
                 stepId: capturedMeta.stepId,
                 unitCodes: capturedMeta.unitCodes,
                 sequence: capturedMeta.sequence,
+                contextKey: capturedMeta.contextKey,
                 step19Summary: summariseWizardStep19Config(capturedConfig),
             });
         }, 350);
-    }, [onUpdatePlatformConfig]);
+    }, [onUpdatePlatformConfig, wizardPlatformSettingsContextKey]);
     const handleWizardPlatformSettingsDraftChange = useCallback((nextConfig: any) => {
         if (mode !== 'active') return;
         if (visibleStep.id !== 'callsigns') return;
@@ -8695,15 +8717,17 @@ const InitialSetupWizard: React.FC<{
             stepId: visibleStep.id,
             unitCodes: getWizardActiveUnitCodes(),
             sequence: Date.now(),
+            contextKey: wizardPlatformSettingsContextKey,
         };
         pushWizardPersistenceTrace('settings-embed-draft:direct-captured', {
             stepId: visibleStep.id,
             unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
             sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
+            contextKey: wizardPlatformSettingsDraftMetaRef.current.contextKey,
             step19Summary: summariseWizardStep19Config(nextConfig),
         });
         scheduleCapturedStep19DraftAutosave();
-    }, [mode, scheduleCapturedStep19DraftAutosave, visibleStep.id]);
+    }, [mode, scheduleCapturedStep19DraftAutosave, visibleStep.id, wizardPlatformSettingsContextKey]);
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
         const handlePlatformConfigUpdated = (event: Event) => {
@@ -12191,6 +12215,7 @@ const InitialSetupWizard: React.FC<{
         const capturedConfig = wizardPlatformSettingsDraftRef.current;
         const capturedMeta = wizardPlatformSettingsDraftMetaRef.current;
         const matchesStep = capturedMeta.stepId === stepId;
+        const matchesContext = capturedMeta.contextKey === wizardPlatformSettingsContextKey;
         pushWizardPersistenceTrace('settings-embed-draft:persist-requested', {
             stepId,
             reason,
@@ -12198,10 +12223,13 @@ const InitialSetupWizard: React.FC<{
             capturedStepId: capturedMeta.stepId,
             capturedUnitCodes: capturedMeta.unitCodes,
             capturedSequence: capturedMeta.sequence,
+            capturedContextKey: capturedMeta.contextKey,
+            currentContextKey: wizardPlatformSettingsContextKey,
             matchesStep,
+            matchesContext,
             step19Summary: summariseWizardStep19Config(capturedConfig),
         });
-        if (!capturedConfig || !matchesStep || !onUpdatePlatformConfig) return false;
+        if (!capturedConfig || !matchesStep || !matchesContext || !onUpdatePlatformConfig) return false;
         onUpdatePlatformConfig(() => capturedConfig);
         await new Promise((resolve) => window.setTimeout(resolve, 0));
         pushWizardPersistenceTrace('settings-embed-draft:persisted', {
