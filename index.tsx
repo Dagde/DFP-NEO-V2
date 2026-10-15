@@ -17,6 +17,15 @@ import { SystemFreezeProvider } from './context/SystemFreezeContext';
 import { showDarkAlert } from './components/DarkMessageModal';
 
 if (typeof window !== 'undefined') {
+  // These troubleshooting traces are no longer used. Clear them before React
+  // mounts so a full trace cannot prevent ordinary app storage writes.
+  [
+    'dfp_step_19_settings_trace',
+    'dfp_setup_wizard_finish_trace',
+  ].forEach((key) => {
+    try { window.localStorage.removeItem(key); } catch { /* storage may be unavailable */ }
+  });
+
   window.alert = (message?: any) => {
     void showDarkAlert(String(message ?? ''), 'Notice', 'warning');
   };

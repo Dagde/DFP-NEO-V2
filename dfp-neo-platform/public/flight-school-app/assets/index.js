@@ -36249,17 +36249,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [wizardFreshUnitSetupActive, setWizardFreshUnitSetupActive] = reactExports.useState(false);
   const wizardReviewAutoReturnScheduledRef = reactExports.useRef(false);
   const onInitialSetupWizardFinishedRef = reactExports.useRef(onInitialSetupWizardFinished);
-  const wizardFinishTraceStorageKey = "dfp_setup_wizard_finish_trace";
-  const step19SettingsTraceStorageKey = "dfp_step_19_settings_trace";
-  const [wizardFinishTrace, setWizardFinishTrace] = reactExports.useState(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(wizardFinishTraceStorageKey) || "[]");
-      return Array.isArray(parsed) ? parsed.slice(-120) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [wizardFinishTrace, setWizardFinishTrace] = reactExports.useState([]);
   const wizardFinishTraceRef = reactExports.useRef(wizardFinishTrace);
   const fileInputRef = reactExports.useRef(null);
   const pendingWizardTemplateFilesRef = reactExports.useRef({});
@@ -36283,7 +36273,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardDiagnosticStorageKeys = [
     "dfp_setup_wizard_import_diag",
     "dfp_setup_test_lmp_diag",
-    "dfp_setup_wizard_org_diag"
+    "dfp_setup_wizard_org_diag",
+    "dfp_step_19_settings_trace",
+    "dfp_setup_wizard_finish_trace"
   ];
   const safeSetWizardLocalStorage = (key, value) => {
     if (typeof window === "undefined") return false;
@@ -36514,37 +36506,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       snapshot: compactWizardDiagDetails(getWizardFinishTraceSnapshot()),
       details: compactWizardDiagDetails(details)
     };
-    const shouldMirrorToStep19Trace = stage.startsWith("settings-embed") || entry.snapshot?.visibleStepId === "callsigns" || details.stepId === "callsigns";
-    if (shouldMirrorToStep19Trace) {
-      try {
-        const memoryTrace = Array.isArray(window.dfpStep19SettingsTrace) ? window.dfpStep19SettingsTrace : null;
-        const storageTrace = memoryTrace ? [] : JSON.parse(window.localStorage.getItem(step19SettingsTraceStorageKey) || "[]");
-        const existingStepTrace = memoryTrace || (Array.isArray(storageTrace) ? storageTrace : []);
-        const stepEntry = {
-          stage: `wizard:${stage}`,
-          atIso: entry.ts,
-          atMs: Date.now(),
-          details: entry.details,
-          snapshot: entry.snapshot
-        };
-        const nextStepTrace = [...existingStepTrace, stepEntry].slice(-1200);
-        window.localStorage.setItem(step19SettingsTraceStorageKey, JSON.stringify(nextStepTrace, null, 2));
-        window.dfpStep19SettingsTrace = nextStepTrace;
-      } catch {
-      }
-    }
-    try {
-      const existing = JSON.parse(window.localStorage.getItem(wizardFinishTraceStorageKey) || "[]");
-      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
-      wizardFinishTraceRef.current = next;
-      setWizardFinishTrace(next);
-      safeSetWizardLocalStorage(wizardFinishTraceStorageKey, JSON.stringify(next));
-      window.neoSetupWizardFinishTrace = next;
-    } catch {
-      const next = [...wizardFinishTraceRef.current, entry].slice(-120);
-      wizardFinishTraceRef.current = next;
-      setWizardFinishTrace(next);
-    }
+    const next = [...wizardFinishTraceRef.current, entry].slice(-40);
+    wizardFinishTraceRef.current = next;
+    setWizardFinishTrace(next);
+    window.neoSetupWizardFinishTrace = next;
   };
   reactExports.useEffect(() => {
     onInitialSetupWizardFinishedRef.current = onInitialSetupWizardFinished;
@@ -45714,11 +45679,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (wizardFinishInProgress) return;
     wizardFinishTraceRef.current = [];
     setWizardFinishTrace([]);
-    try {
-      window.localStorage.removeItem(wizardFinishTraceStorageKey);
-      window.neoSetupWizardFinishTrace = [];
-    } catch {
-    }
+    window.neoSetupWizardFinishTrace = [];
     setWizardFinishInProgress(true);
     setWizardReviewComplete(false);
     setSaveMessage("Finishing setup review...");
@@ -172962,6 +172923,15 @@ console.log("React imported");
 console.log("ReactDOM imported");
 console.log("App imported");
 if (typeof window !== "undefined") {
+  [
+    "dfp_step_19_settings_trace",
+    "dfp_setup_wizard_finish_trace"
+  ].forEach((key) => {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+    }
+  });
   window.alert = (message) => {
     void showDarkAlert(String(message ?? ""), "Notice", "warning");
   };
