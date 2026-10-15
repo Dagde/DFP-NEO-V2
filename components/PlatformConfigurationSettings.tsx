@@ -14958,8 +14958,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             </div>
             <div className="mt-4 space-y-3">
-              {[...staffQualificationCatalogue.qualifications]
-                .sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, undefined, { sensitivity: 'base' }))
+              {(wizardEditMode
+                ? staffQualificationCatalogue.qualifications
+                : [...staffQualificationCatalogue.qualifications]
+                    .sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, undefined, { sensitivity: 'base' })))
                 .map((entry) => (
                 <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 xl:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto]">
                   <DraftField

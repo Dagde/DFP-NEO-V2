@@ -31299,7 +31299,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   )
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: [...staffQualificationCatalogue.qualifications].sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, void 0, { sensitivity: "base" })).map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 xl:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: (wizardEditMode ? staffQualificationCatalogue.qualifications : [...staffQualificationCatalogue.qualifications].sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, void 0, { sensitivity: "base" }))).map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 xl:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   DraftField,
                   {
