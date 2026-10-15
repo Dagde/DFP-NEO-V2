@@ -37218,6 +37218,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     return rows.length > 0 ? rows.join("\n") : defaultWizardUnitModulesDraft;
   };
   const [trainingRecordsDraft, setTrainingRecordsDraft] = reactExports.useState("");
+  const trainingRecordsDraftDirtyRef = reactExports.useRef(false);
   const [unitModulesDraft, setUnitModulesDraft] = reactExports.useState(() => buildHydratedUnitModulesDraft());
   const auditRecordingPageOptions = [...AUDIT_RECORDING_PAGE_OPTIONS];
   const [auditRecordingPageDraft, setAuditRecordingPageDraft] = reactExports.useState(auditRecordingPageOptions[0]);
@@ -37278,6 +37279,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     return getCrewPositionOptions(wizardCrewPositionTerminology, existingRoles, unitDraft.operationalModel);
   };
   const [resourceSharingDraft, setResourceSharingDraft] = reactExports.useState("Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.");
+  const resourceSharingDraftDirtyRef = reactExports.useRef(false);
   const [currencyDraft, setCurrencyDraft] = reactExports.useState("");
   const currencyDraftDirtyRef = reactExports.useRef(false);
   const updateCurrencyDraft = (updater) => {
@@ -37286,9 +37288,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const [scoringDraft, setScoringDraft] = reactExports.useState(defaultWizardScoringDraft);
   const [wizardScoringPhraseBank, setWizardScoringPhraseBank] = reactExports.useState(() => wizardScoringRowsToPhraseBank(defaultWizardScoringDraft));
+  const scoringPhraseBankDirtyRef = reactExports.useRef(false);
   const [wizardScoringTab, setWizardScoringTab] = reactExports.useState("Airmanship");
   const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = reactExports.useState("");
+  const staffCurrencyEventsDraftDirtyRef = reactExports.useRef(false);
   const [directedTaskSetupsDraft, setDirectedTaskSetupsDraft] = reactExports.useState("");
+  const directedTaskSetupsDraftDirtyRef = reactExports.useRef(false);
   const formatWizardOrganisationPath = (path) => path.map((item) => String(item || "").trim()).filter(Boolean).join(" / ");
   const formatWizardImmediateParentLabel = (path) => {
     const cleanPath = path.map((item) => String(item || "").trim()).filter(Boolean);
@@ -37776,10 +37781,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const buildHydratedResourceSharingDraft = () => {
     const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || "").trim().toUpperCase();
     const targetUnitKey = normaliseUnitSettingsIdentifier(targetUnitCode);
-    const persistedUnitDraft = String(getTargetWizardUnit()?.settings?.resourceSharingDraft || "").trim();
-    if (persistedUnitDraft) return persistedUnitDraft;
     const savedUnitDraft = getSavedWizardUnitString(["resourceSharing", "resourceSharingDraft"], targetUnitCode);
     if (savedUnitDraft) return savedUnitDraft;
+    const persistedUnitDraft = String(getTargetWizardUnit()?.settings?.resourceSharingDraft || "").trim();
+    if (persistedUnitDraft) return persistedUnitDraft;
     const settings = activeOrganisation?.settings || {};
     const groupOwnerKey = (group) => normaliseUnitSettingsIdentifier(
       group?.ownerUnitCode || group?.sourceUnitCode || ""
@@ -37882,6 +37887,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const buildHydratedStaffCurrencyEventsDraft = () => {
     const targetUnitKey = normaliseUnitSettingsIdentifier(getTargetWizardUnitCode());
     const targetAircraftKey = normaliseUnitSettingsIdentifier(getTargetWizardAircraftCode());
+    const savedDraft = getSavedWizardUnitString(["staffCurrencyEvents", "staffCurrencyEventsDraft"]);
+    if (savedDraft) return savedDraft;
     const profiles = Array.isArray(activeOrganisation?.settings?.standardMissionProfiles?.profiles) ? activeOrganisation.settings.standardMissionProfiles.profiles : Array.isArray(activeOrganisation?.settings?.standardMissionProfiles) ? activeOrganisation.settings.standardMissionProfiles : [];
     const currencyProfiles = profiles.filter((profile) => {
       const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || "");
@@ -37899,10 +37906,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       currency: String(profile.currency || ""),
       config: String(profile.config || "ANY"),
       aircraftCount: String(profile.aircraftCount ?? 1)
-    }))) : getSavedWizardUnitString(["staffCurrencyEvents", "staffCurrencyEventsDraft"]);
+    }))) : "";
   };
   const buildHydratedDirectedTaskSetupsDraft = () => {
     const savedDraft = getSavedWizardUnitString(["directedTaskSetups", "directedTaskSetupsDraft"]);
+    if (savedDraft) return savedDraft;
     const profiles = Array.isArray(activeOrganisation?.settings?.standardMissionProfiles?.profiles) ? activeOrganisation.settings.standardMissionProfiles.profiles : Array.isArray(activeOrganisation?.settings?.standardMissionProfiles) ? activeOrganisation.settings.standardMissionProfiles : [];
     const targetUnitKey = normaliseUnitSettingsIdentifier(getTargetWizardUnitCode());
     const targetAircraftKey = normaliseUnitSettingsIdentifier(getTargetWizardAircraftCode());
@@ -37933,10 +37941,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     })));
   };
   const buildHydratedScoringPhraseBankDraft = () => {
-    const unitPhraseBank = getTargetWizardUnit()?.settings?.trainingReportPhraseBank;
-    if (isScoringPhraseBank(unitPhraseBank)) return unitPhraseBank;
     const savedDraft = getSavedWizardUnitString(["scoringMatrix", "scoringDraft"]);
     if (savedDraft) return wizardScoringRowsToPhraseBank(savedDraft);
+    const unitPhraseBank = getTargetWizardUnit()?.settings?.trainingReportPhraseBank;
+    if (isScoringPhraseBank(unitPhraseBank)) return unitPhraseBank;
     const retainedPhraseBank = isSavedWizardFreshUnitSetup() ? currentUnit?.settings?.trainingReportPhraseBank : null;
     if (isScoringPhraseBank(retainedPhraseBank)) return retainedPhraseBank;
     const organisationPhraseBank = activeOrganisation?.settings?.trainingReportPhraseBank;
@@ -37972,17 +37980,19 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       setTraineeCourseInputRows(nextCourseRows.length > 0 ? nextCourseRows : [""]);
     }
     if (forceUnitReplacement || savedTrainees) setTraineeDraft(savedTrainees || "");
-    if (forceUnitReplacement || nextTrainingRecords) setTrainingRecordsDraft(nextTrainingRecords || "");
+    if (forceUnitReplacement || nextTrainingRecords && !trainingRecordsDraftDirtyRef.current) setTrainingRecordsDraft(nextTrainingRecords || "");
     if (nextRanksAndLabels) setRankLabelsDraft(nextRanksAndLabels);
     setRankSettingsDraft(nextRankSettings);
-    if (forceUnitReplacement || nextResourceSharing) {
+    if (forceUnitReplacement || nextResourceSharing && !resourceSharingDraftDirtyRef.current) {
       setResourceSharingDraft(nextResourceSharing || "Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.");
     }
     if (forceUnitReplacement || nextCurrencies && !currencyDraftDirtyRef.current) setCurrencyDraft(nextCurrencies || "");
-    setWizardScoringPhraseBank(nextScoringPhraseBank);
-    setScoringDraft(wizardPhraseBankToScoringDraft(nextScoringPhraseBank));
-    if (forceUnitReplacement || nextStaffCurrencyEvents) setStaffCurrencyEventsDraft(nextStaffCurrencyEvents || "");
-    if (forceUnitReplacement || nextDirectedTaskSetups) setDirectedTaskSetupsDraft(nextDirectedTaskSetups || "");
+    if (forceUnitReplacement || !scoringPhraseBankDirtyRef.current) {
+      setWizardScoringPhraseBank(nextScoringPhraseBank);
+      setScoringDraft(wizardPhraseBankToScoringDraft(nextScoringPhraseBank));
+    }
+    if (forceUnitReplacement || nextStaffCurrencyEvents && !staffCurrencyEventsDraftDirtyRef.current) setStaffCurrencyEventsDraft(nextStaffCurrencyEvents || "");
+    if (forceUnitReplacement || nextDirectedTaskSetups && !directedTaskSetupsDraftDirtyRef.current) setDirectedTaskSetupsDraft(nextDirectedTaskSetups || "");
   };
   const buildHydratedUnitParentDraft = (unitsDraftValue, draft) => {
     const savedWizardUnitParents = String(getSavedInitialSetupWizardDrafts()?.unitParentDraft || "").trim();
@@ -38164,6 +38174,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       unitModulesDraftDirtyRef.current = false;
       buildRulesDraftDirtyRef.current = false;
       currencyDraftDirtyRef.current = false;
+      trainingRecordsDraftDirtyRef.current = false;
+      resourceSharingDraftDirtyRef.current = false;
+      scoringPhraseBankDirtyRef.current = false;
+      staffCurrencyEventsDraftDirtyRef.current = false;
+      directedTaskSetupsDraftDirtyRef.current = false;
       setStaffProfilesCommitted(false);
       setStaffCommitSummary("");
       setTraineeAllocationCommitted(false);
@@ -38296,6 +38311,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     crewRolesDraftDirtyRef.current = false;
     buildRulesDraftDirtyRef.current = false;
     currencyDraftDirtyRef.current = false;
+    trainingRecordsDraftDirtyRef.current = false;
+    resourceSharingDraftDirtyRef.current = false;
+    scoringPhraseBankDirtyRef.current = false;
+    staffCurrencyEventsDraftDirtyRef.current = false;
+    directedTaskSetupsDraftDirtyRef.current = false;
   }, [currentUnit?.code, unitCode, unitDraft.code]);
   reactExports.useEffect(() => {
     if (resourceDraftDirtyRef.current) return;
@@ -39817,6 +39837,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         initialSetupWizardDrafts: {
           ...settings.initialSetupWizardDrafts || {},
           trainingRecordsDraft,
+          unitStepDraftsByCode: {
+            ...readPlainWizardObject(settings.initialSetupWizardDrafts?.unitStepDraftsByCode),
+            ...targetUnitCode ? {
+              [normaliseUnitSettingsIdentifier(targetUnitCode)]: {
+                ...readPlainWizardObject(settings.initialSetupWizardDrafts?.unitStepDraftsByCode)?.[normaliseUnitSettingsIdentifier(targetUnitCode)],
+                draftUnitCode: targetUnitCode,
+                trainingRecordsDraft,
+                trainingRecords: trainingRecordsDraft
+              }
+            } : {}
+          },
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         }
       }));
@@ -39910,6 +39941,19 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           ...settings.initialSetupWizardDrafts || {},
           currencyDraft: currencyDraftToSave,
           staffCurrencyEventsDraft: staffCurrencyEventsDraftToSave,
+          unitStepDraftsByCode: {
+            ...readPlainWizardObject(settings.initialSetupWizardDrafts?.unitStepDraftsByCode),
+            ...targetUnitKey ? {
+              [targetUnitKey]: {
+                ...readPlainWizardObject(settings.initialSetupWizardDrafts?.unitStepDraftsByCode)?.[targetUnitKey],
+                draftUnitCode: targetUnitCode,
+                currencyDraft: currencyDraftToSave,
+                currencies: currencyDraftToSave,
+                staffCurrencyEventsDraft: staffCurrencyEventsDraftToSave,
+                staffCurrencyEvents: staffCurrencyEventsDraftToSave
+              }
+            } : {}
+          },
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         }
       };
@@ -40025,6 +40069,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         initialSetupWizardDrafts: {
           ...settings.initialSetupWizardDrafts || {},
           directedTaskSetupsDraft: directedTaskSetupsDraftToSave,
+          unitStepDraftsByCode: {
+            ...readPlainWizardObject(settings.initialSetupWizardDrafts?.unitStepDraftsByCode),
+            ...targetUnitKey ? {
+              [targetUnitKey]: {
+                ...readPlainWizardObject(settings.initialSetupWizardDrafts?.unitStepDraftsByCode)?.[targetUnitKey],
+                draftUnitCode: targetUnitCode,
+                directedTaskSetupsDraft: directedTaskSetupsDraftToSave,
+                directedTaskSetups: directedTaskSetupsDraftToSave
+              }
+            } : {}
+          },
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         }
       };
@@ -40050,6 +40105,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         initialSetupWizardDrafts: {
           ...settings.initialSetupWizardDrafts || {},
           scoringDraft: nextScoringDraft,
+          unitStepDraftsByCode: {
+            ...readPlainWizardObject(settings.initialSetupWizardDrafts?.unitStepDraftsByCode),
+            ...targetUnitCode ? {
+              [normaliseUnitSettingsIdentifier(targetUnitCode)]: {
+                ...readPlainWizardObject(settings.initialSetupWizardDrafts?.unitStepDraftsByCode)?.[normaliseUnitSettingsIdentifier(targetUnitCode)],
+                draftUnitCode: targetUnitCode,
+                scoringDraft: nextScoringDraft,
+                scoringMatrix: nextScoringDraft
+              }
+            } : {}
+          },
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         }
       }));
@@ -42053,6 +42119,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         grade5: getWizardCellByHeader(result.headers || [], row, "Grade 5")
       })).filter((row) => row.dimension || row.passStandard || row.failStandard);
       const importedDraft = formatWizardScoringRows(importedRows);
+      scoringPhraseBankDirtyRef.current = true;
       setScoringDraft(importedDraft);
       setWizardScoringPhraseBank(wizardScoringRowsToPhraseBank(importedDraft));
       const message = `Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? "" : "s"} into the wizard. Click Next to sync it into Settings.`;
@@ -43206,6 +43273,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const rows = parseWizardTrainingReportRows(trainingRecordsDraft);
     const row = rows[0] || { genericName: "", organisationName: "", gradeMin: "", gradeMax: "", showNumbers: "Yes", noGradeOption: "No", passLabel: "", failLabel: "" };
     const updateRow = (field, value) => {
+      trainingRecordsDraftDirtyRef.current = true;
       setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, genericName: "Training Report", [field]: value }]));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
@@ -43385,11 +43453,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const updateRow = (index, field, value) => {
       const nextRows = [...editableRows];
       nextRows[index] = { ...nextRows[index], [field]: value };
+      resourceSharingDraftDirtyRef.current = true;
       setResourceSharingDraft(formatWizardSharingRows(nextRows));
     };
     const updateRowValues = (index, values) => {
       const nextRows = [...editableRows];
       nextRows[index] = { ...nextRows[index], ...values };
+      resourceSharingDraftDirtyRef.current = true;
       setResourceSharingDraft(formatWizardSharingRows(nextRows));
     };
     const unitOptions = Array.from(new Set([
@@ -43479,6 +43549,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     return mapCurrencyRowsToCurrencyEventRows(parseWizardCurrencyRows(currencyDraft));
   };
   const updateWizardCurrencyEventRows = (rows) => {
+    staffCurrencyEventsDraftDirtyRef.current = true;
     setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows(rows));
     updateCurrencyDraft(formatWizardCurrencyRows(mapCurrencyEventRowsToCurrencyProfileRows(rows)));
   };
@@ -43522,6 +43593,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const renderScoringEditor = () => {
     const updateScoringPhraseBank = (nextPhraseBank) => {
+      scoringPhraseBankDirtyRef.current = true;
       setWizardScoringPhraseBank(nextPhraseBank);
       setScoringDraft(wizardPhraseBankToScoringDraft(nextPhraseBank));
     };
@@ -43588,6 +43660,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }];
   };
   const updateWizardDirectedTaskRows = (rows) => {
+    directedTaskSetupsDraftDirtyRef.current = true;
     setDirectedTaskSetupsDraft(formatWizardDirectedTaskSetupRows(rows));
   };
   const renderDirectedTaskSetupsEditor = () => {
