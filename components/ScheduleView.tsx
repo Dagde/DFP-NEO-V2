@@ -4721,10 +4721,32 @@ const InitialSetupWizard: React.FC<{
             .replace(/^_|_$/g, '')
     );
     const buildHydratedUnitModulesDraft = () => {
+        const savedSetupMode = String(
+            activeOrganisation?.settings?.initialSetupWizardDrafts?.setupMode
+            || activeOrganisation?.settings?.initialSetupWizardDraft?.setupMode
+            || '',
+        ).trim();
+        const freshUnitSetup = wizardFreshUnitSetupActive || savedSetupMode === 'new-unit';
+        const targetUnitKey = normaliseUnitSettingsIdentifier(
+            unitDraft.code || (freshUnitSetup ? '' : currentUnit?.code || unitCode || ''),
+        );
+        const savedDrafts = activeOrganisation?.settings?.initialSetupWizardDrafts || {};
+        const unitDraftMap = savedDrafts?.unitStepDraftsByCode && typeof savedDrafts.unitStepDraftsByCode === 'object'
+            ? savedDrafts.unitStepDraftsByCode
+            : {};
+        const matchingUnitKey = Object.keys(unitDraftMap).find((key) => normaliseUnitSettingsIdentifier(key) === targetUnitKey);
+        const matchingUnitDraft = matchingUnitKey && unitDraftMap[matchingUnitKey] && typeof unitDraftMap[matchingUnitKey] === 'object'
+            ? unitDraftMap[matchingUnitKey]
+            : {};
+        const legacyOwnerKey = normaliseUnitSettingsIdentifier(savedDrafts?.unitDraft?.code || savedDrafts?.resourceDraft?.poolUnitCode || '');
         const savedDraft = String(
-            activeOrganisation?.settings?.initialSetupWizardDraft?.unitModules
-            || activeOrganisation?.settings?.initialSetupWizardDrafts?.unitModulesDraft
-            || activeOrganisation?.settings?.initialSetupWizardDrafts?.unitModules
+            matchingUnitDraft.unitModulesDraft
+            || matchingUnitDraft.unitModules
+            || (targetUnitKey && legacyOwnerKey === targetUnitKey
+                ? activeOrganisation?.settings?.initialSetupWizardDraft?.unitModules
+                    || savedDrafts?.unitModulesDraft
+                    || savedDrafts?.unitModules
+                : '')
             || '',
         ).trim();
         if (savedDraft) return savedDraft;
@@ -4736,7 +4758,7 @@ const InitialSetupWizard: React.FC<{
             'Training Records',
             'Build Intelligence',
         ].filter(Boolean)));
-        const targetUnitCode = normaliseUnitSettingsIdentifier(currentUnit?.code || unitCode || '');
+        const targetUnitCode = targetUnitKey;
         const rows = moduleNames.map((moduleName, index) => {
             const moduleCode = makeWizardModuleCode(moduleName, index);
             const savedModule = (platformConfig?.unitModules || []).find((item: any) => (
@@ -5109,6 +5131,46 @@ const InitialSetupWizard: React.FC<{
         }
         return '';
     };
+    const getSavedWizardUnitStepDraft = (targetUnitCode?: string) => {
+        const drafts = getSavedInitialSetupWizardDrafts();
+        const cleanTargetUnit = normaliseUnitSettingsIdentifier(
+            targetUnitCode || unitDraft.code || (isSavedWizardFreshUnitSetup() ? '' : currentUnit?.code || unitCode),
+        );
+        const unitMap = drafts?.unitStepDraftsByCode && typeof drafts.unitStepDraftsByCode === 'object' && !Array.isArray(drafts.unitStepDraftsByCode)
+            ? drafts.unitStepDraftsByCode
+            : {};
+        const exactKey = cleanTargetUnit
+            ? Object.keys(unitMap).find((key) => normaliseUnitSettingsIdentifier(key) === cleanTargetUnit)
+            : '';
+        if (exactKey) {
+            const exactDraft = unitMap[exactKey];
+            return exactDraft && typeof exactDraft === 'object' && !Array.isArray(exactDraft) ? exactDraft : {};
+        }
+        const legacyOwner = normaliseUnitSettingsIdentifier(
+            drafts?.unitDraft?.code
+            || drafts?.resourceDraft?.poolUnitCode
+            || drafts?.draftUnitCode
+            || '',
+        );
+        if (cleanTargetUnit && legacyOwner === cleanTargetUnit) return drafts;
+        return {};
+    };
+    const getSavedWizardUnitString = (keys: string[], targetUnitCode?: string) => {
+        const draft = getSavedWizardUnitStepDraft(targetUnitCode);
+        for (const key of keys) {
+            const value = String(draft?.[key] || '').trim();
+            if (value) return value;
+        }
+        return '';
+    };
+    const getSavedWizardUnitObject = (keys: string[], targetUnitCode?: string) => {
+        const draft = getSavedWizardUnitStepDraft(targetUnitCode);
+        for (const key of keys) {
+            const value = draft?.[key];
+            if (value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0) return value;
+        }
+        return {};
+    };
     const getSavedWizardObject = (...keys: string[]) => {
         const drafts = getSavedInitialSetupWizardDrafts();
         for (const key of keys) {
@@ -5118,7 +5180,9 @@ const InitialSetupWizard: React.FC<{
         return {};
     };
     const getSavedWizardObjectForUnit = (unitSpecificKey: string, fallbackKey: string, targetUnitCode?: string) => {
-        const cleanTargetUnit = normaliseUnitSettingsIdentifier(targetUnitCode || unitDraft.code || currentUnit?.code || unitCode);
+        const cleanTargetUnit = normaliseUnitSettingsIdentifier(
+            targetUnitCode || unitDraft.code || (isSavedWizardFreshUnitSetup() ? '' : currentUnit?.code || unitCode),
+        );
         const drafts = getSavedInitialSetupWizardDrafts();
         const unitMap = readPlainWizardObject(drafts?.[unitSpecificKey]);
         if (cleanTargetUnit && unitMap && typeof unitMap === 'object' && !Array.isArray(unitMap)) {
@@ -5180,7 +5244,15 @@ const InitialSetupWizard: React.FC<{
         }
         return fallback;
     };
-    const getTargetWizardUnitCode = () => String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
+    const getTargetWizardUnitCode = () => String(
+        unitDraft.code || (isSavedWizardFreshUnitSetup() ? '' : currentUnit?.code || unitCode || ''),
+    ).trim().toUpperCase();
+    const getTargetWizardUnit = () => {
+        const targetUnitKey = normaliseUnitSettingsIdentifier(getTargetWizardUnitCode());
+        return activeUnits.find((unit: any) => (
+            targetUnitKey && normaliseUnitSettingsIdentifier(unit?.code) === targetUnitKey
+        )) || null;
+    };
     const getTargetWizardAircraftCode = () => String(resourceDraft.aircraftCode || primaryAircraftType?.code || crewDraft.aircraftCode || '').trim().toUpperCase();
     const findWizardAlternateCrewProfiles = (
         settingsSource: any = activeOrganisation?.settings,
@@ -5192,7 +5264,7 @@ const InitialSetupWizard: React.FC<{
         return normaliseCrewCompositionSettings(settingsSource?.crewCompositionSettings || null).alternateCompositions.filter((profile) => {
             const profileUnitKey = normaliseUnitSettingsIdentifier(profile.unitCode || '');
             const profileAircraftKey = normaliseUnitSettingsIdentifier(profile.aircraftTypeCode || '');
-            const unitMatches = !targetUnitKey || !profileUnitKey || profileUnitKey === targetUnitKey;
+            const unitMatches = !targetUnitKey || profileUnitKey === targetUnitKey;
             const aircraftMatches = !targetAircraftKey || !profileAircraftKey || profileAircraftKey === targetAircraftKey;
             const modelMatches = !profile.operationalModels?.length || profile.operationalModels.includes(targetModel);
             return unitMatches
@@ -5223,7 +5295,7 @@ const InitialSetupWizard: React.FC<{
     const buildHydratedAlternateCrewDraft = () => {
         const profile = findWizardAlternateCrewProfile();
         if (profile?.roleRequirements?.length) return formatRoleRequirementsText(profile.roleRequirements);
-        return getSavedWizardString('alternateCrews', 'alternateCrewDraft');
+        return getSavedWizardUnitString(['alternateCrews', 'alternateCrewDraft']);
     };
     const readWizardAlternateCrewDraftRows = (value: any): WizardAlternateCrewDraftRow[] => (
         Array.isArray(value)
@@ -5250,12 +5322,12 @@ const InitialSetupWizard: React.FC<{
                     roles: formatRoleRequirementsText(profile.roleRequirements),
                 }));
         }
-        const savedDrafts = getSavedInitialSetupWizardDrafts();
-        const savedRows = readWizardAlternateCrewDraftRows(savedDrafts?.alternateCrewDrafts || activeOrganisation?.settings?.initialSetupWizardDraft?.alternateCrewDrafts);
+        const savedDrafts = getSavedWizardUnitStepDraft();
+        const savedRows = readWizardAlternateCrewDraftRows(savedDrafts?.alternateCrewDrafts);
         if (savedRows.length > 0) {
             return savedRows.map((row, index) => ({ ...row, name: `Alt${index + 1}` }));
         }
-        const legacyDraft = getSavedWizardString('alternateCrews', 'alternateCrewDraft');
+        const legacyDraft = getSavedWizardUnitString(['alternateCrews', 'alternateCrewDraft']);
         return legacyDraft.trim()
             ? [{ id: 'alternate-crew-draft-1', name: 'Alt1', roles: legacyDraft }]
             : [];
@@ -5270,7 +5342,9 @@ const InitialSetupWizard: React.FC<{
             && item?.isActive !== false
         ));
         if (!ruleSet) {
-            const savedBuildRules = getSavedWizardString('buildRules', 'buildRulesDraft');
+            const savedBuildRulesObject = getSavedWizardUnitObject(['buildRulesDraft']);
+            if (Object.keys(savedBuildRulesObject).length > 0) return savedBuildRulesObject as typeof buildRulesDraft;
+            const savedBuildRules = getSavedWizardUnitString(['buildRules', 'buildRulesDraftText']);
             return savedBuildRules ? parseHydratedBuildRulesDraft(savedBuildRules) : null;
         }
         const rules = readPlainWizardObject(ruleSet.rules);
@@ -5445,7 +5519,7 @@ const InitialSetupWizard: React.FC<{
         const matchingProfiles = currencyProfiles.filter((profile: any) => {
             const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || '');
             const profileAircraftKey = normaliseUnitSettingsIdentifier(profile?.aircraftTypeCode || profile?.aircraftCode || profile?.aircraft || '');
-            const unitMatches = !targetUnitKey || !profileUnitKey || profileUnitKey === targetUnitKey;
+            const unitMatches = !targetUnitKey || profileUnitKey === targetUnitKey;
             const aircraftMatches = !targetAircraftKey || !profileAircraftKey || profileAircraftKey === targetAircraftKey;
             return unitMatches
                 && aircraftMatches
@@ -5461,11 +5535,11 @@ const InitialSetupWizard: React.FC<{
                 currency: String(profile.currency || profile.name || ''),
                 aircraftCount: String(profile.aircraftCount ?? 1),
             })))
-            : getSavedWizardString('currencies', 'currencyDraft');
+            : getSavedWizardUnitString(['currencies', 'currencyDraft']);
     };
     const buildHydratedTrainingRecordsDraft = () => {
-        const template = currentUnit?.settings?.trainingReportTemplate;
-        if (!template) return getSavedWizardString('trainingRecords', 'trainingRecordsDraft');
+        const template = getTargetWizardUnit()?.settings?.trainingReportTemplate;
+        if (!template) return getSavedWizardUnitString(['trainingRecords', 'trainingRecordsDraft']);
         return formatWizardTrainingReportRows([{
             genericName: 'Training Report',
             organisationName: String(template.displayName || 'Assessment Form'),
@@ -5478,14 +5552,20 @@ const InitialSetupWizard: React.FC<{
         }]);
     };
     const buildHydratedStaffCurrencyEventsDraft = () => {
+        const targetUnitKey = normaliseUnitSettingsIdentifier(getTargetWizardUnitCode());
+        const targetAircraftKey = normaliseUnitSettingsIdentifier(getTargetWizardAircraftCode());
         const profiles = Array.isArray(activeOrganisation?.settings?.standardMissionProfiles?.profiles)
             ? activeOrganisation.settings.standardMissionProfiles.profiles
             : Array.isArray(activeOrganisation?.settings?.standardMissionProfiles)
                 ? activeOrganisation.settings.standardMissionProfiles
                 : [];
-        const currencyProfiles = profiles.filter((profile: any) => (
-            Boolean(String(profile?.currency || '').trim()) || /^currency:/i.test(String(profile?.description || '').trim())
-        ));
+        const currencyProfiles = profiles.filter((profile: any) => {
+            const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || '');
+            const profileAircraftKey = normaliseUnitSettingsIdentifier(profile?.aircraftTypeCode || profile?.aircraftCode || profile?.aircraft || '');
+            return (!targetUnitKey || profileUnitKey === targetUnitKey)
+                && (!targetAircraftKey || !profileAircraftKey || profileAircraftKey === targetAircraftKey)
+                && (Boolean(String(profile?.currency || '').trim()) || /^currency:/i.test(String(profile?.description || '').trim()));
+        });
         return currencyProfiles.length > 0
             ? formatWizardStandardCurrencyEventRows(currencyProfiles.map((profile: any) => ({
                 name: String(profile.name || profile.shortTitle || ''),
@@ -5499,10 +5579,10 @@ const InitialSetupWizard: React.FC<{
                 config: String(profile.config || 'ANY'),
                 aircraftCount: String(profile.aircraftCount ?? 1),
             })))
-            : getSavedWizardString('staffCurrencyEvents', 'staffCurrencyEventsDraft');
+            : getSavedWizardUnitString(['staffCurrencyEvents', 'staffCurrencyEventsDraft']);
     };
     const buildHydratedDirectedTaskSetupsDraft = () => {
-        const savedDraft = getSavedWizardString('directedTaskSetups', 'directedTaskSetupsDraft');
+        const savedDraft = getSavedWizardUnitString(['directedTaskSetups', 'directedTaskSetupsDraft']);
         const profiles = Array.isArray(activeOrganisation?.settings?.standardMissionProfiles?.profiles)
             ? activeOrganisation.settings.standardMissionProfiles.profiles
             : Array.isArray(activeOrganisation?.settings?.standardMissionProfiles)
@@ -5513,7 +5593,7 @@ const InitialSetupWizard: React.FC<{
         const directedProfiles = profiles.filter((profile: any) => {
             const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || '');
             const profileAircraftKey = normaliseUnitSettingsIdentifier(profile?.aircraftTypeCode || profile?.aircraftCode || profile?.aircraft || '');
-            const unitMatches = targetUnitKey ? (!profileUnitKey || profileUnitKey === targetUnitKey) : true;
+            const unitMatches = targetUnitKey ? profileUnitKey === targetUnitKey : true;
             const aircraftMatches = targetAircraftKey ? (!profileAircraftKey || profileAircraftKey === targetAircraftKey) : true;
             return unitMatches
                 && aircraftMatches
@@ -5541,18 +5621,18 @@ const InitialSetupWizard: React.FC<{
         })));
     };
     const buildHydratedScoringPhraseBankDraft = () => {
-        const unitPhraseBank = currentUnit?.settings?.trainingReportPhraseBank;
+        const unitPhraseBank = getTargetWizardUnit()?.settings?.trainingReportPhraseBank;
         if (isScoringPhraseBank(unitPhraseBank)) return unitPhraseBank;
         const organisationPhraseBank = activeOrganisation?.settings?.trainingReportPhraseBank;
         if (isScoringPhraseBank(organisationPhraseBank)) return organisationPhraseBank;
-        const savedDraft = getSavedWizardString('scoringMatrix', 'scoringDraft');
+        const savedDraft = getSavedWizardUnitString(['scoringMatrix', 'scoringDraft']);
         return wizardScoringRowsToPhraseBank(savedDraft || defaultWizardScoringDraft);
     };
     const hydrateSupplementaryWizardDrafts = () => {
-        const savedTraineeCourses = getSavedWizardString('traineeCourses', 'traineeCourseOptionsDraft');
-        const savedTrainees = getSavedWizardString('trainees', 'traineeDraft');
-        const savedStaff = getSavedWizardString('staff', 'staffDraft');
-        const nextCrewLabels = getSavedWizardString('crewLabels', 'crewLabelsDraft');
+        const savedTraineeCourses = getSavedWizardUnitString(['traineeCourses', 'traineeCourseOptionsDraft']);
+        const savedTrainees = getSavedWizardUnitString(['trainees', 'traineeDraft']);
+        const savedStaff = getSavedWizardUnitString(['staff', 'staffDraft']);
+        const nextCrewLabels = getSavedWizardUnitString(['crewLabels', 'crewLabelsDraft']);
         const nextAlternateCrewRows = buildHydratedAlternateCrewDrafts();
         const nextAlternateCrews = nextAlternateCrewRows[0]?.roles || buildHydratedAlternateCrewDraft();
         const nextBuildRules = buildHydratedBuildRulesDraft();
@@ -5702,7 +5782,7 @@ const InitialSetupWizard: React.FC<{
     };
 
     useEffect(() => {
-        if (wizardFreshUnitSetupActive) return;
+        if (isSavedWizardFreshUnitSetup()) return;
         if (organisationDraftDirtyRef.current) {
             const hydratedUnits = buildHydratedUnitsTodayDraft();
             const hydratedUnitParents = buildHydratedUnitParentDraft(hydratedUnits, organisationDraft);
@@ -5751,6 +5831,7 @@ const InitialSetupWizard: React.FC<{
         activeOrganisation?.settings?.initialSetupWizardDraft?.unitsTodayDraft,
         activeOrganisation?.settings?.initialSetupWizardDrafts?.locationsTodayDraft,
         activeOrganisation?.settings?.initialSetupWizardDraft?.locationsTodayDraft,
+        activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode,
         wizardFreshUnitSetupActive,
     ]);
 
@@ -5761,10 +5842,32 @@ const InitialSetupWizard: React.FC<{
         activeOrganisation?.settings?.initialSetupWizardDraft?.unitModules,
         activeOrganisation?.settings?.initialSetupWizardDrafts?.unitModulesDraft,
         activeOrganisation?.settings?.initialSetupWizardDrafts?.unitModules,
+        activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode,
         currentUnit?.code,
         unitCode,
+        unitDraft.code,
         JSON.stringify(platformConfig?.modules || []),
         JSON.stringify(platformConfig?.unitModules || []),
+    ]);
+
+    useEffect(() => {
+        if (!normaliseUnitSettingsIdentifier(unitDraft.code)) return;
+        const savedUnitDraft = getSavedWizardUnitStepDraft(unitDraft.code);
+        if (wizardFreshUnitSetupActive && Object.keys(savedUnitDraft).length === 0 && !getTargetWizardUnit()) return;
+        if (!unitModulesDraftDirtyRef.current) setUnitModulesDraft(buildHydratedUnitModulesDraft());
+        if (!crewDraftDirtyRef.current) setCrewDraft(buildHydratedCrewDraft());
+        hydrateSupplementaryWizardDrafts();
+    }, [
+        unitDraft.code,
+        activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode,
+        JSON.stringify(activeUnits.map((unit: any) => [
+            unit?.code,
+            unit?.settings?.trainingReportTemplate,
+            unit?.settings?.trainingReportPhraseBank,
+        ])),
+        JSON.stringify(platformConfig?.schedulingRuleSets || []),
+        JSON.stringify(activeOrganisation?.settings?.standardMissionProfiles || {}),
+        JSON.stringify(activeOrganisation?.settings?.crewCompositionSettings || {}),
     ]);
 
     useEffect(() => {
@@ -5902,7 +6005,7 @@ const InitialSetupWizard: React.FC<{
     useEffect(() => {
         if (resourceDraftDirtyRef.current || crewDraftDirtyRef.current) return;
         const savedResourceDraft = getSavedWizardObjectForUnit('resourceDraftsByUnit', 'resourceDraft');
-        const savedCrewDraft = getSavedWizardObject('crewDraft');
+        const savedCrewDraft = getSavedWizardUnitObject(['crewDraft']);
         const hasSavedResourceDraft = Object.keys(savedResourceDraft).length > 0;
         const cleanWizardResourceUnit = normaliseUnitSettingsIdentifier(unitDraft.code || savedResourceDraft.poolUnitCode || resourceDraft.poolUnitCode || currentUnit?.code || unitCode);
         const matchingWizardResourcePool = activeResourcePools.find((pool: any) => (
@@ -5937,7 +6040,7 @@ const InitialSetupWizard: React.FC<{
             aircraftCode: String(savedCrewDraft.aircraftCode || (useOperationalResourceFallback ? matchingWizardAircraftType?.code || matchingWizardResourcePool?.aircraftTypeCode : '') || ''),
             standardSeats: String(savedCrewDraft.standardSeats || (useOperationalResourceFallback ? formatRoleRequirementsText(getAircraftStandardSeats(matchingWizardAircraftType)) : '')),
         });
-    }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.resourceDraftsByUnit, activeOrganisation?.settings?.initialSetupWizardDrafts?.crewDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.resourceDraftsByUnit, activeOrganisation?.settings?.initialSetupWizardDraft?.crewDraft, JSON.stringify(activeResourcePools.map((pool: any) => [pool?.id, pool?.code, pool?.name, pool?.unitCode, pool?.locationCode, pool?.aircraftTypeCode, pool?.status, pool?.settings])), JSON.stringify(activeAircraftTypes.map((aircraft: any) => [aircraft?.code, aircraft?.name, aircraft?.crewComposition])), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name, unitDraft.code, unitDraft.locationCode, wizardFreshUnitSetupActive]);
+    }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.resourceDraftsByUnit, activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode, activeOrganisation?.settings?.initialSetupWizardDrafts?.crewDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.resourceDraftsByUnit, activeOrganisation?.settings?.initialSetupWizardDraft?.crewDraft, JSON.stringify(activeResourcePools.map((pool: any) => [pool?.id, pool?.code, pool?.name, pool?.unitCode, pool?.locationCode, pool?.aircraftTypeCode, pool?.status, pool?.settings])), JSON.stringify(activeAircraftTypes.map((aircraft: any) => [aircraft?.code, aircraft?.name, aircraft?.crewComposition])), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name, unitDraft.code, unitDraft.locationCode, wizardFreshUnitSetupActive]);
 
     useEffect(() => {
         setCrewDraft((draft) => ({
@@ -5948,7 +6051,7 @@ const InitialSetupWizard: React.FC<{
 
     useEffect(() => {
         if (accessDraftDirtyRef.current) return;
-        const savedDraft = getSavedWizardObject('accessDraft');
+        const savedDraft = getSavedWizardUnitObject(['accessDraft']);
         setAccessDraft({
             userName: String(savedDraft.userName || primaryUserAccess?.userName || primaryUserAccess?.user || 'New user'),
             locationCode: sanitiseLegacyWizardLocationCode(savedDraft.locationCode || primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || '', shouldIgnoreLegacyWizardLocationSamples),
@@ -5956,11 +6059,11 @@ const InitialSetupWizard: React.FC<{
             moduleCode: String(savedDraft.moduleCode || primaryUserAccess?.moduleCode || primaryUserAccess?.module || 'DFP'),
             accessLevel: String(savedDraft.accessLevel || primaryUserAccess?.accessLevel || primaryUserAccess?.access || 'View'),
         });
-    }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.accessDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.accessDraft, primaryUserAccess?.userName, primaryUserAccess?.user, primaryUserAccess?.locationCode, primaryUserAccess?.unitCode, primaryUserAccess?.moduleCode, primaryUserAccess?.accessLevel, primaryUserAccess?.access, currentLocation?.code, currentUnit?.code]);
+    }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.accessDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode, activeOrganisation?.settings?.initialSetupWizardDraft?.accessDraft, primaryUserAccess?.userName, primaryUserAccess?.user, primaryUserAccess?.locationCode, primaryUserAccess?.unitCode, primaryUserAccess?.moduleCode, primaryUserAccess?.accessLevel, primaryUserAccess?.access, currentLocation?.code, currentUnit?.code, unitDraft.code]);
 
     useEffect(() => {
         if (trainingDraftDirtyRef.current) return;
-        const savedDraft = getSavedWizardObject('trainingDraft');
+        const savedDraft = getSavedWizardUnitObject(['trainingDraft']);
         setTrainingDraft({
             lmpCode: String(savedDraft.lmpCode || ''),
             lmpName: String(savedDraft.lmpName || ''),
@@ -5972,7 +6075,7 @@ const InitialSetupWizard: React.FC<{
             accessModel: String(savedDraft.accessModel || primaryMasterLmpRule?.operationalModel || primaryMasterLmpRule?.model || 'Any Model'),
             accessLevel: String(savedDraft.accessLevel || primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || 'View'),
         });
-    }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.trainingDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.trainingDraft, activeWizardLocationCode, primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmp?.audience, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.operationalModel, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code, unitDraft.code, unitDraft.locationCode, locationDraft.code, defaultWizardLmpAudience]);
+    }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.trainingDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.unitStepDraftsByCode, activeOrganisation?.settings?.initialSetupWizardDraft?.trainingDraft, activeWizardLocationCode, primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmp?.audience, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.operationalModel, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code, unitDraft.code, unitDraft.locationCode, locationDraft.code, defaultWizardLmpAudience]);
 
     useEffect(() => {
         if (crewRolesDraftDirtyRef.current) return;
@@ -6004,7 +6107,11 @@ const InitialSetupWizard: React.FC<{
         completedStepIds?: string[];
     } = {}) => {
         const scoringDraftToSave = wizardPhraseBankToScoringDraft(wizardScoringPhraseBank);
-        const resourceDraftUnitKey = normaliseUnitSettingsIdentifier(unitDraft.code || resourceDraft.poolUnitCode || currentUnit?.code || unitCode);
+        const resourceDraftUnitKey = normaliseUnitSettingsIdentifier(
+            unitDraft.code
+            || resourceDraft.poolUnitCode
+            || (isSavedWizardFreshUnitSetup() ? '' : currentUnit?.code || unitCode),
+        );
         const existingResourceDraftsByUnit = readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.resourceDraftsByUnit);
         const resourceDraftsByUnit = resourceDraftUnitKey
             ? {
@@ -6015,6 +6122,34 @@ const InitialSetupWizard: React.FC<{
                 },
             }
             : existingResourceDraftsByUnit;
+        const existingUnitStepDraftsByCode = readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.unitStepDraftsByCode);
+        const currentUnitStepDraft = {
+            draftUnitCode: resourceDraftUnitKey,
+            activeStepId: overrides.activeStepId ?? visibleStep.id,
+            activeStepIndex: overrides.activeStepIndex ?? currentStep,
+            completedStepIds: overrides.completedStepIds ?? Array.from(completedWizardStepIds),
+            crewDraft,
+            accessDraft,
+            trainingDraft,
+            crewLabelsDraft,
+            alternateCrewDraft,
+            alternateCrewDrafts,
+            buildRulesDraft,
+            buildRulesDraftText,
+            staffDraft,
+            traineeCourses: traineeCourseOptionsDraft,
+            traineeCourseOptionsDraft,
+            traineeDraft,
+            trainingRecordsDraft,
+            unitModulesDraft,
+            currencyDraft,
+            scoringDraft: scoringDraftToSave,
+            staffCurrencyEventsDraft,
+            directedTaskSetupsDraft,
+        };
+        const unitStepDraftsByCode = resourceDraftUnitKey
+            ? { ...existingUnitStepDraftsByCode, [resourceDraftUnitKey]: currentUnitStepDraft }
+            : existingUnitStepDraftsByCode;
         return {
             organisationDraft,
             unitsTodayDraft,
@@ -6025,11 +6160,13 @@ const InitialSetupWizard: React.FC<{
             unitDraftsByCode: getWizardUnitDraftMapWithCurrent(),
             resourceDraft,
             resourceDraftsByUnit,
+            unitStepDraftsByCode,
             crewDraft,
             accessDraft,
             trainingDraft,
             crewLabelsDraft,
             alternateCrewDraft,
+            alternateCrewDrafts,
             buildRulesDraft,
             buildRulesDraftText,
             staffDraft,
@@ -6096,11 +6233,13 @@ const InitialSetupWizard: React.FC<{
                     unitDraftsByCode: snapshot.unitDraftsByCode,
                     resourceDraft: snapshot.resourceDraft,
                     resourceDraftsByUnit: snapshot.resourceDraftsByUnit,
+                    unitStepDraftsByCode: snapshot.unitStepDraftsByCode,
                     crewDraft: snapshot.crewDraft,
                     accessDraft: snapshot.accessDraft,
                     trainingDraft: snapshot.trainingDraft,
                     crewLabels: snapshot.crewLabelsDraft,
                     alternateCrews: snapshot.alternateCrewDraft,
+                    alternateCrewDrafts: snapshot.alternateCrewDrafts,
                     buildRules: snapshot.buildRulesDraftText,
                     trainingRecords: snapshot.trainingRecordsDraft,
                     unitModules: snapshot.unitModulesDraft,
@@ -7639,14 +7778,14 @@ const InitialSetupWizard: React.FC<{
             const shouldReplaceProfile = (profile: any) => {
                 const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || '');
                 const profileAircraftKey = normaliseUnitSettingsIdentifier(profile?.aircraftTypeCode || profile?.aircraftCode || profile?.aircraft || '');
-                const unitMatches = targetUnitKey ? (!profileUnitKey || profileUnitKey === targetUnitKey) : !profileUnitKey;
+                const unitMatches = targetUnitKey ? profileUnitKey === targetUnitKey : !profileUnitKey;
                 const aircraftMatches = targetAircraftKey ? (!profileAircraftKey || profileAircraftKey === targetAircraftKey) : !profileAircraftKey;
                 return unitMatches && aircraftMatches;
             };
             const shouldReplaceStandardMissionProfile = (profile: any) => {
                 const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || '');
                 const profileAircraftKey = normaliseUnitSettingsIdentifier(profile?.aircraftTypeCode || profile?.aircraftCode || profile?.aircraft || '');
-                const unitMatches = targetUnitKey ? (!profileUnitKey || profileUnitKey === targetUnitKey) : !profileUnitKey;
+                const unitMatches = targetUnitKey ? profileUnitKey === targetUnitKey : !profileUnitKey;
                 const aircraftMatches = targetAircraftKey ? (!profileAircraftKey || profileAircraftKey === targetAircraftKey) : !profileAircraftKey;
                 const hasCurrencyMarker = Boolean(String(profile?.currency || '').trim()) || /^currency:/i.test(String(profile?.description || '').trim());
                 return unitMatches && aircraftMatches && hasCurrencyMarker;
@@ -7777,7 +7916,7 @@ const InitialSetupWizard: React.FC<{
             const shouldReplaceDirectedTaskProfile = (profile: any) => {
                 const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || '');
                 const profileAircraftKey = normaliseUnitSettingsIdentifier(profile?.aircraftTypeCode || profile?.aircraftCode || profile?.aircraft || '');
-                const unitMatches = targetUnitKey ? (!profileUnitKey || profileUnitKey === targetUnitKey) : !profileUnitKey;
+                const unitMatches = targetUnitKey ? profileUnitKey === targetUnitKey : !profileUnitKey;
                 const aircraftMatches = targetAircraftKey ? (!profileAircraftKey || profileAircraftKey === targetAircraftKey) : true;
                 const hasCurrencyMarker = Boolean(String(profile?.currency || '').trim()) || /^currency:/i.test(String(profile?.description || '').trim());
                 return unitMatches && aircraftMatches && !hasCurrencyMarker;
@@ -8785,10 +8924,12 @@ const InitialSetupWizard: React.FC<{
             && level.options.some((option: string) => hasMeaningfulWizardText(option, ['Organisation', defaultName, level.name]))
         );
     };
-    const getWizardActiveUnitCodes = () => Array.from(new Set([
-        ...(String(unitCode || '').split('+').map((item) => item.trim()).filter(Boolean)),
-        unitDraft.code,
-    ].map((item) => String(item || '').trim()).filter(Boolean)));
+    const getWizardActiveUnitCodes = () => {
+        const setupUnitCode = String(unitDraft.code || '').trim();
+        return setupUnitCode
+            ? [setupUnitCode]
+            : Array.from(new Set(String(unitCode || '').split('+').map((item) => item.trim()).filter(Boolean)));
+    };
     const getWizardSourceResourcePool = () => {
         const targetUnitCode = normaliseWizardValue(unitDraft.code || currentUnit?.code || unitCode);
         const targetAircraftCode = normaliseWizardValue(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code);
@@ -10157,6 +10298,11 @@ const InitialSetupWizard: React.FC<{
             operationalModel: String(getUnitOperationalModel(selectedUnit || {}) || 'pooled-crew'),
             hasTrainees: selectedUnit?.settings?.hasTrainees !== false,
         });
+        const selectedUnitStepDraft = getSavedWizardUnitStepDraft(selectedDraft.code);
+        const selectedCompletedStepIds = Array.isArray(selectedUnitStepDraft?.completedStepIds)
+            ? selectedUnitStepDraft.completedStepIds.map((stepId: any) => String(stepId || '').trim()).filter(Boolean)
+            : [];
+        const selectedStepIndex = Number(selectedUnitStepDraft?.activeStepIndex);
         setWizardUnitSetupChoiceMade(true);
         setWizardExistingUnitPickerOpen(false);
         setWizardFreshUnitSetupActive(false);
@@ -10175,7 +10321,10 @@ const InitialSetupWizard: React.FC<{
             ...(cleanCode ? { [cleanCode]: selectedDraft } : {}),
         }));
         setUnitDraft(selectedDraft);
-        setWizardStep((step) => Math.min(Math.max(0, step), steps.length - 1));
+        setCompletedWizardStepIds(new Set(selectedCompletedStepIds));
+        setWizardStep(Number.isFinite(selectedStepIndex)
+            ? Math.min(Math.max(0, selectedStepIndex), steps.length - 1)
+            : 0);
         setSaveMessage(`${selectedDraft.code || 'Unit'} setup loaded for review.`);
     };
 
@@ -10199,7 +10348,6 @@ const InitialSetupWizard: React.FC<{
                     hasTrainees: true,
                 },
                 unitDraftsByCode: {},
-                resourceDraftsByUnit: {},
                 resourceDraft: {
                     aircraftCode: '',
                     aircraftName: '',
@@ -10286,7 +10434,6 @@ const InitialSetupWizard: React.FC<{
                     unitParents: '',
                     unitDraft: unitSpecificDraftPatch.unitDraft,
                     unitDraftsByCode: {},
-                    resourceDraftsByUnit: {},
                     resourceDraft: unitSpecificDraftPatch.resourceDraft,
                     crewDraft: unitSpecificDraftPatch.crewDraft,
                     accessDraft: unitSpecificDraftPatch.accessDraft,
@@ -10344,7 +10491,6 @@ const InitialSetupWizard: React.FC<{
                     hasTrainees: true,
                 },
                 unitDraftsByCode: {},
-                resourceDraftsByUnit: {},
                 completedStepIds: [],
                 activeStepId: 'analysis',
                 activeStepIndex: 0,
@@ -12339,9 +12485,9 @@ const InitialSetupWizard: React.FC<{
                     onWizardSaveReady={handleWizardPlatformSettingsSaveReady}
                     onWizardDraftChange={handleWizardPlatformSettingsDraftChange}
                     canUsePlatformPermission={canUsePlatformPermission}
-                    activeUnitCode={unitCode || unitDraft.code || ''}
+                    activeUnitCode={unitDraft.code || unitCode || ''}
                     activeUnitCodes={activeUnitCodesForSettings}
-                    activeCompositeUnitCode={unitCode || ''}
+                    activeCompositeUnitCode={unitDraft.code || unitCode || ''}
                     activeOperationalModel={unitDraft.operationalModel}
                     focusUnitCode={unitDraft.code || unitCode || ''}
                     focusLocationCode={locationDraft.code || locationCode || ''}
