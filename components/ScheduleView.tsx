@@ -12468,6 +12468,10 @@ const InitialSetupWizard: React.FC<{
         extraProps: Record<string, unknown> = {},
     ) => {
         const activeUnitCodesForSettings = getWizardActiveUnitCodes();
+        const wizardSettingsUnitKey = normaliseUnitSettingsIdentifier(
+            activeUnitCodesForSettings[0] || unitDraft.code || unitCode || '',
+        ) || 'unassigned-unit';
+        const wizardSettingsSetupMode = wizardFreshUnitSetupActive ? 'new-unit' : 'existing-unit';
         const embedClassName = [
             'wizard-settings-embed',
             'wizard-settings-embed--scroll-stable',
@@ -12475,7 +12479,11 @@ const InitialSetupWizard: React.FC<{
             'rounded-lg border border-slate-200 bg-white',
         ].filter(Boolean).join(' ');
         return (
-            <div key={`wizard-settings-${visibleStep.id}-${scrollTarget}`} ref={wizardSettingsEmbedRef} className={embedClassName}>
+            <div
+                key={`wizard-settings-${wizardSettingsSetupMode}-${wizardSettingsUnitKey}-${visibleStep.id}-${scrollTarget}`}
+                ref={wizardSettingsEmbedRef}
+                className={embedClassName}
+            >
                 <PlatformConfigurationSettings
                     currentUserPermission={currentUserPermission}
                     onShowSuccess={(message) => setSaveMessage(message || successMessage)}

@@ -43752,34 +43752,46 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   ) });
   const renderWizardPlatformSettingsEmbed = (scrollTarget, _focusSubsectionId = "", successMessage = "Settings saved into Settings.", extraProps = {}) => {
     const activeUnitCodesForSettings = getWizardActiveUnitCodes();
+    const wizardSettingsUnitKey = normaliseUnitSettingsIdentifier(
+      activeUnitCodesForSettings[0] || unitDraft.code || unitCode || ""
+    ) || "unassigned-unit";
+    const wizardSettingsSetupMode = wizardFreshUnitSetupActive ? "new-unit" : "existing-unit";
     const embedClassName = [
       "wizard-settings-embed",
       "wizard-settings-embed--scroll-stable",
       scrollTarget === "platform-dfp-resource-rows" ? "wizard-settings-embed--resource-rows" : "",
       "rounded-lg border border-slate-200 bg-white"
     ].filter(Boolean).join(" ");
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: wizardSettingsEmbedRef, className: embedClassName, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      PlatformConfigurationSettings,
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
       {
-        currentUserPermission,
-        onShowSuccess: (message) => setSaveMessage(message || successMessage),
-        scrollTarget,
-        sectionOnly: true,
-        wizardEditMode: true,
-        onWizardSaveReady: handleWizardPlatformSettingsSaveReady,
-        onWizardDraftChange: handleWizardPlatformSettingsDraftChange,
-        canUsePlatformPermission,
-        activeUnitCode: unitDraft.code || unitCode || "",
-        activeUnitCodes: activeUnitCodesForSettings,
-        activeCompositeUnitCode: unitDraft.code || unitCode || "",
-        activeOperationalModel: unitDraft.operationalModel,
-        focusUnitCode: unitDraft.code || unitCode || "",
-        focusLocationCode: locationDraft.code || locationCode || "",
-        focusSubsectionId: "",
-        onNavigateToSettingsSection,
-        ...extraProps
-      }
-    ) }, `wizard-settings-${visibleStep.id}-${scrollTarget}`);
+        ref: wizardSettingsEmbedRef,
+        className: embedClassName,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          PlatformConfigurationSettings,
+          {
+            currentUserPermission,
+            onShowSuccess: (message) => setSaveMessage(message || successMessage),
+            scrollTarget,
+            sectionOnly: true,
+            wizardEditMode: true,
+            onWizardSaveReady: handleWizardPlatformSettingsSaveReady,
+            onWizardDraftChange: handleWizardPlatformSettingsDraftChange,
+            canUsePlatformPermission,
+            activeUnitCode: unitDraft.code || unitCode || "",
+            activeUnitCodes: activeUnitCodesForSettings,
+            activeCompositeUnitCode: unitDraft.code || unitCode || "",
+            activeOperationalModel: unitDraft.operationalModel,
+            focusUnitCode: unitDraft.code || unitCode || "",
+            focusLocationCode: locationDraft.code || locationCode || "",
+            focusSubsectionId: "",
+            onNavigateToSettingsSection,
+            ...extraProps
+          }
+        )
+      },
+      `wizard-settings-${wizardSettingsSetupMode}-${wizardSettingsUnitKey}-${visibleStep.id}-${scrollTarget}`
+    );
   };
   const promptShell = (question, answer, actionLabel = "Next", saveAction, answerPanelClass = "max-w-full overflow-visible rounded-xl border border-slate-300 bg-white/80 p-3 shadow-sm") => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
