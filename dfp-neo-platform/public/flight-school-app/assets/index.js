@@ -46396,15 +46396,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the current values and refine them later in Settings." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Dispatch limit" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: wizardField("Max dispatch per hour", buildRulesDraft.maxDispatchPerHour, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), void 0, "2") })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Duty limits" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: [
-              wizardField("Maximum crew duty hours", buildRulesDraft.maxCrewDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxCrewDutyHours: value })), void 0, "12"),
-              wizardField("Preferred duty period hours", buildRulesDraft.preferredDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, preferredDutyHours: value })), void 0, "10")
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Dispatch limit" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: wizardField("Max dispatch per hour", buildRulesDraft.maxDispatchPerHour, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), void 0, "2") })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Duty limits" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 sm:grid-cols-2", children: [
+                wizardField("Maximum crew duty hours", buildRulesDraft.maxCrewDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxCrewDutyHours: value })), void 0, "12"),
+                wizardField("Preferred duty period hours", buildRulesDraft.preferredDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, preferredDutyHours: value })), void 0, "10")
+              ] })
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [

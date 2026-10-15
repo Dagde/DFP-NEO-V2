@@ -15334,17 +15334,19 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the current values and refine them later in Settings.</p>,
                 <div className="space-y-4">
-                    <div className="rounded-lg border border-slate-300 bg-white p-3">
-                        <p className={wizardSectionHeadingClass}>Dispatch limit</p>
-                        <div className="mt-3 grid gap-3 md:grid-cols-2">
-                            {wizardField('Max dispatch per hour', buildRulesDraft.maxDispatchPerHour, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), undefined, '2')}
+                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                        <div className="rounded-lg border border-slate-300 bg-white p-3">
+                            <p className={wizardSectionHeadingClass}>Dispatch limit</p>
+                            <div className="mt-3">
+                                {wizardField('Max dispatch per hour', buildRulesDraft.maxDispatchPerHour, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), undefined, '2')}
+                            </div>
                         </div>
-                    </div>
-                    <div className="rounded-lg border border-slate-300 bg-white p-3">
-                        <p className={wizardSectionHeadingClass}>Duty limits</p>
-                        <div className="mt-3 grid gap-3 md:grid-cols-2">
-                            {wizardField('Maximum crew duty hours', buildRulesDraft.maxCrewDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxCrewDutyHours: value })), undefined, '12')}
-                            {wizardField('Preferred duty period hours', buildRulesDraft.preferredDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, preferredDutyHours: value })), undefined, '10')}
+                        <div className="rounded-lg border border-slate-300 bg-white p-3">
+                            <p className={wizardSectionHeadingClass}>Duty limits</p>
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                {wizardField('Maximum crew duty hours', buildRulesDraft.maxCrewDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxCrewDutyHours: value })), undefined, '12')}
+                                {wizardField('Preferred duty period hours', buildRulesDraft.preferredDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, preferredDutyHours: value })), undefined, '10')}
+                            </div>
                         </div>
                     </div>
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
