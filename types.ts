@@ -518,6 +518,9 @@ export interface SyllabusItemDetail {
   preFlightTime: number;
   postFlightTime: number;
   individualTimingOverrides?: {
+    flightOrSimHours?: boolean;
+    totalEventHours?: boolean;
+    duration?: boolean;
     preFlightTime?: boolean;
     postFlightTime?: boolean;
   };

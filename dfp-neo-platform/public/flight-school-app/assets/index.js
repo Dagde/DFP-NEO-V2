@@ -54189,9 +54189,21 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
     );
     const normalizedPreFlightTime = clampLmpHourToTenths(preFlightTime, 0, 0);
     const normalizedPostFlightTime = clampLmpHourToTenths(postFlightTime, 0, 0);
+    const normalizedDuration = clampLmpHourToTenths(duration, 0.3, 0.3);
+    const normalizedFlightOrSimHours = clampLmpHourToTenths(flightOrSimHours, 0, 0);
+    const normalizedTotalEventHours = clampLmpHourToTenths(totalEventHours, 0.3, 0.3);
     const supportsTimingOverrides = item.lmpSource === "master" || item.lmpSource === "custom" || Boolean(item.masterEventId);
     const existingTimingOverrides = item.individualTimingOverrides || {};
     const timingOverrides = { ...existingTimingOverrides };
+    if (supportsTimingOverrides && normalizedDuration !== clampLmpHourToTenths(item.duration ?? 1, 0.3, 1)) {
+      timingOverrides.duration = true;
+    }
+    if (supportsTimingOverrides && normalizedFlightOrSimHours !== clampLmpHourToTenths(item.flightOrSimHours ?? 0, 0, 0)) {
+      timingOverrides.flightOrSimHours = true;
+    }
+    if (supportsTimingOverrides && normalizedTotalEventHours !== clampLmpHourToTenths(item.totalEventHours ?? item.duration ?? 1, 0.3, 1)) {
+      timingOverrides.totalEventHours = true;
+    }
     if (supportsTimingOverrides && normalizedPreFlightTime !== clampLmpHourToTenths(item.preFlightTime ?? 0, 0, 0)) {
       timingOverrides.preFlightTime = true;
     }
@@ -54209,9 +54221,9 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
       useTestingOfficerSecondaryCallsign: testEventType === "FLIGHT_TEST" ? useTestingOfficerSecondaryCallsign : false,
       dayNight,
       sortieType: type === "Flight" ? sortieType : void 0,
-      duration: clampLmpHourToTenths(duration, 0.3, 0.3),
-      flightOrSimHours: clampLmpHourToTenths(flightOrSimHours, 0, 0),
-      totalEventHours: clampLmpHourToTenths(totalEventHours, 0.3, 0.3),
+      duration: normalizedDuration,
+      flightOrSimHours: normalizedFlightOrSimHours,
+      totalEventHours: normalizedTotalEventHours,
       preFlightTime: normalizedPreFlightTime,
       postFlightTime: normalizedPostFlightTime,
       ...supportsTimingOverrides && hasTimingOverrides ? { individualTimingOverrides: timingOverrides } : {},
@@ -129485,10 +129497,20 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS = [
 ];
 const getIndividualLmpMasterOverrides = (item, masterItem) => {
   if (!item) return {};
+  const explicitTimingOverrides = item.individualTimingOverrides || {};
+  const individualFlightOrSimHours = getNonNegativeFiniteNumber(item.flightOrSimHours);
+  const individualDuration = getNonNegativeFiniteNumber(item.duration);
+  const individualTotalEventHours = getNonNegativeFiniteNumber(item.totalEventHours);
+  const masterFlightOrSimHours = getNonNegativeFiniteNumber(masterItem?.flightOrSimHours);
+  const masterDuration = getNonNegativeFiniteNumber(masterItem?.duration);
+  const masterTotalEventHours = getNonNegativeFiniteNumber(masterItem?.totalEventHours);
+  const legacyCreationCopiedTotalIntoFlightTiming = explicitTimingOverrides.flightOrSimHours !== true && explicitTimingOverrides.duration !== true && individualTotalEventHours !== null && masterTotalEventHours !== null && individualTotalEventHours === masterTotalEventHours && individualFlightOrSimHours === individualTotalEventHours && individualDuration === individualTotalEventHours && (individualFlightOrSimHours !== masterFlightOrSimHours || individualDuration !== masterDuration);
   const overrides = INDIVIDUAL_LMP_EDITABLE_FIELDS.reduce((nextOverrides, field) => {
     if (Object.prototype.hasOwnProperty.call(item, field)) {
+      if (legacyCreationCopiedTotalIntoFlightTiming && (field === "flightOrSimHours" || field === "duration")) {
+        return nextOverrides;
+      }
       if (field === "preFlightTime" || field === "postFlightTime") {
-        const explicitTimingOverrides = item.individualTimingOverrides || {};
         const hasExplicitTimingOverride = explicitTimingOverrides[field] === true;
         const individualValue = getNonNegativeFiniteNumber(item[field]);
         const masterValue = getNonNegativeFiniteNumber(masterItem?.[field]);

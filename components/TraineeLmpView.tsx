@@ -292,9 +292,21 @@ export const LmpEventEditModal: React.FC<{
         );
         const normalizedPreFlightTime = clampLmpHourToTenths(preFlightTime, 0, 0);
         const normalizedPostFlightTime = clampLmpHourToTenths(postFlightTime, 0, 0);
+        const normalizedDuration = clampLmpHourToTenths(duration, 0.3, 0.3);
+        const normalizedFlightOrSimHours = clampLmpHourToTenths(flightOrSimHours, 0, 0);
+        const normalizedTotalEventHours = clampLmpHourToTenths(totalEventHours, 0.3, 0.3);
         const supportsTimingOverrides = item.lmpSource === 'master' || item.lmpSource === 'custom' || Boolean(item.masterEventId);
         const existingTimingOverrides = (item.individualTimingOverrides || {}) as NonNullable<SyllabusItemDetail['individualTimingOverrides']>;
         const timingOverrides: NonNullable<SyllabusItemDetail['individualTimingOverrides']> = { ...existingTimingOverrides };
+        if (supportsTimingOverrides && normalizedDuration !== clampLmpHourToTenths(item.duration ?? 1, 0.3, 1)) {
+            timingOverrides.duration = true;
+        }
+        if (supportsTimingOverrides && normalizedFlightOrSimHours !== clampLmpHourToTenths(item.flightOrSimHours ?? 0, 0, 0)) {
+            timingOverrides.flightOrSimHours = true;
+        }
+        if (supportsTimingOverrides && normalizedTotalEventHours !== clampLmpHourToTenths(item.totalEventHours ?? item.duration ?? 1, 0.3, 1)) {
+            timingOverrides.totalEventHours = true;
+        }
         if (supportsTimingOverrides && normalizedPreFlightTime !== clampLmpHourToTenths(item.preFlightTime ?? 0, 0, 0)) {
             timingOverrides.preFlightTime = true;
         }
@@ -314,9 +326,9 @@ export const LmpEventEditModal: React.FC<{
                 : false,
             dayNight,
             sortieType: type === 'Flight' ? sortieType : undefined,
-            duration: clampLmpHourToTenths(duration, 0.3, 0.3),
-            flightOrSimHours: clampLmpHourToTenths(flightOrSimHours, 0, 0),
-            totalEventHours: clampLmpHourToTenths(totalEventHours, 0.3, 0.3),
+            duration: normalizedDuration,
+            flightOrSimHours: normalizedFlightOrSimHours,
+            totalEventHours: normalizedTotalEventHours,
             preFlightTime: normalizedPreFlightTime,
             postFlightTime: normalizedPostFlightTime,
             ...(supportsTimingOverrides && hasTimingOverrides ? { individualTimingOverrides: timingOverrides } : {}),

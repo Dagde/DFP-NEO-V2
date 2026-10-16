@@ -9650,10 +9650,31 @@ const getIndividualLmpMasterOverrides = (
     masterItem?: SyllabusItemDetail
 ): Partial<SyllabusItemDetail> => {
     if (!item) return {};
+    const explicitTimingOverrides = item.individualTimingOverrides || {};
+    const individualFlightOrSimHours = getNonNegativeFiniteNumber(item.flightOrSimHours);
+    const individualDuration = getNonNegativeFiniteNumber(item.duration);
+    const individualTotalEventHours = getNonNegativeFiniteNumber(item.totalEventHours);
+    const masterFlightOrSimHours = getNonNegativeFiniteNumber(masterItem?.flightOrSimHours);
+    const masterDuration = getNonNegativeFiniteNumber(masterItem?.duration);
+    const masterTotalEventHours = getNonNegativeFiniteNumber(masterItem?.totalEventHours);
+    const legacyCreationCopiedTotalIntoFlightTiming =
+        explicitTimingOverrides.flightOrSimHours !== true &&
+        explicitTimingOverrides.duration !== true &&
+        individualTotalEventHours !== null &&
+        masterTotalEventHours !== null &&
+        individualTotalEventHours === masterTotalEventHours &&
+        individualFlightOrSimHours === individualTotalEventHours &&
+        individualDuration === individualTotalEventHours &&
+        (individualFlightOrSimHours !== masterFlightOrSimHours || individualDuration !== masterDuration);
     const overrides = INDIVIDUAL_LMP_EDITABLE_FIELDS.reduce((nextOverrides, field) => {
         if (Object.prototype.hasOwnProperty.call(item, field)) {
+            if (
+                legacyCreationCopiedTotalIntoFlightTiming &&
+                (field === 'flightOrSimHours' || field === 'duration')
+            ) {
+                return nextOverrides;
+            }
             if (field === 'preFlightTime' || field === 'postFlightTime') {
-                const explicitTimingOverrides = item.individualTimingOverrides || {};
                 const hasExplicitTimingOverride = explicitTimingOverrides[field] === true;
                 const individualValue = getNonNegativeFiniteNumber((item as any)[field]);
                 const masterValue = getNonNegativeFiniteNumber((masterItem as any)?.[field]);

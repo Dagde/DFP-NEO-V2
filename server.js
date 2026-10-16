@@ -8094,10 +8094,36 @@ const forfeitTrainingReportFollowUpForRplForSync = (item) => {
 
 const getIndividualLmpMasterOverridesForSync = (item, masterItem) => {
   if (!item) return {};
+  const explicitTimingOverrides = item?.individualTimingOverrides || {};
+  const finiteNonNegativeNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  };
+  const individualFlightOrSimHours = finiteNonNegativeNumber(item.flightOrSimHours);
+  const individualDuration = finiteNonNegativeNumber(item.duration);
+  const individualTotalEventHours = finiteNonNegativeNumber(item.totalEventHours);
+  const masterFlightOrSimHours = finiteNonNegativeNumber(masterItem?.flightOrSimHours);
+  const masterDuration = finiteNonNegativeNumber(masterItem?.duration);
+  const masterTotalEventHours = finiteNonNegativeNumber(masterItem?.totalEventHours);
+  const legacyCreationCopiedTotalIntoFlightTiming =
+    explicitTimingOverrides.flightOrSimHours !== true &&
+    explicitTimingOverrides.duration !== true &&
+    individualTotalEventHours !== null &&
+    masterTotalEventHours !== null &&
+    individualTotalEventHours === masterTotalEventHours &&
+    individualFlightOrSimHours === individualTotalEventHours &&
+    individualDuration === individualTotalEventHours &&
+    (individualFlightOrSimHours !== masterFlightOrSimHours || individualDuration !== masterDuration);
   const overrides = INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC.reduce((nextOverrides, field) => {
     if (Object.prototype.hasOwnProperty.call(item, field)) {
+      if (
+        legacyCreationCopiedTotalIntoFlightTiming &&
+        (field === 'flightOrSimHours' || field === 'duration')
+      ) {
+        return nextOverrides;
+      }
       if (field === 'preFlightTime' || field === 'postFlightTime') {
-        const hasExplicitTimingOverride = item?.individualTimingOverrides?.[field] === true;
+        const hasExplicitTimingOverride = explicitTimingOverrides[field] === true;
         const individualValue = typeof item[field] === 'number' && Number.isFinite(item[field]) ? item[field] : null;
         const masterValue = typeof masterItem?.[field] === 'number' && Number.isFinite(masterItem[field]) ? masterItem[field] : null;
         const legacyLooksLikeMissingTiming =
