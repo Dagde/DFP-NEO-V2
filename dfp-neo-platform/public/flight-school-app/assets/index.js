@@ -98799,6 +98799,7 @@ const formatFixedCrewManifestStatus = (status) => {
 };
 const LMP_VERSION_NOTE_REGEX = /\[DFP_LMP_VERSION:([0-9]+(?:\.[0-9]+)?)\]/i;
 const DEFAULT_LMP_VERSION = "1.0";
+const normaliseDeleteConfirmationPhrase = (value) => String(value || "").normalize("NFKC").replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g, " ").trim();
 const getLmpVersionFromNotes = (notes) => {
   const match = String(notes || "").match(LMP_VERSION_NOTE_REGEX);
   return match?.[1] || null;
@@ -101142,7 +101143,7 @@ const SyllabusView = ({
       setDeleteError(`No database event rows were found for ${selectedCourseType}. Hard refresh and try again, or check the selected unit/location.`);
       return;
     }
-    if (deleteConfirmText.trim() !== deleteConfirmationPhrase) {
+    if (normaliseDeleteConfirmationPhrase(deleteConfirmText) !== normaliseDeleteConfirmationPhrase(deleteConfirmationPhrase)) {
       setDeleteError(`Type ${deleteConfirmationPhrase} to confirm permanent deletion.`);
       return;
     }
@@ -101165,8 +101166,10 @@ const SyllabusView = ({
           body: JSON.stringify({ password: deletePassword })
         });
         const verifyData = await verifyResp.json();
-        if (!verifyData.valid) {
-          setDeleteError("Incorrect password. Please try again.");
+        if (!verifyResp.ok || !verifyData.valid) {
+          setDeleteError(
+            verifyData?.message || verifyData?.error || (verifyResp.status === 401 ? "Your login session has expired. Sign in again before deleting this LMP." : "Incorrect password. Please try again.")
+          );
           setIsDeleting(false);
           return;
         }
@@ -102449,7 +102452,7 @@ const SyllabusView = ({
                     style: {
                       width: "100%",
                       backgroundColor: "#111827",
-                      border: `1px solid ${deleteError && deleteConfirmText.trim() !== deleteConfirmationPhrase ? "#ef4444" : "#4b5563"}`,
+                      border: `1px solid ${deleteError && normaliseDeleteConfirmationPhrase(deleteConfirmText) !== normaliseDeleteConfirmationPhrase(deleteConfirmationPhrase) ? "#ef4444" : "#4b5563"}`,
                       borderRadius: 6,
                       padding: "8px 10px",
                       color: "#fff",
