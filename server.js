@@ -11626,7 +11626,18 @@ app.post('/api/auth/verify-password', authRateLimit, async (req, res) => {
 
     // Use bcryptjs to verify password
     const bcrypt = require('bcryptjs');
-    const valid = await bcrypt.compare(password, userData.password);
+    let valid = await bcrypt.compare(password, userData.password);
+
+    // SSO users authenticate against the New Customer website. Their app-side
+    // password can be generated and is not necessarily the password they used
+    // to sign in, so check the original credential authority before rejecting it.
+    if (!valid && userData.userId) {
+      try {
+        valid = await verifyWebsitePassword(userData.userId, password);
+      } catch (websiteError) {
+        console.warn(`⚠️ Website password verification unavailable for ${displayName}:`, websiteError.message);
+      }
+    }
 
     if (valid) {
       console.log(`✅ Password verified for ${displayName}`);
@@ -11634,7 +11645,10 @@ app.post('/api/auth/verify-password', authRateLimit, async (req, res) => {
       console.log(`❌ Password verification failed for ${displayName}`);
     }
 
-    res.json({ valid });
+    res.json({
+      valid,
+      ...(valid ? {} : { error: 'Incorrect password for the currently signed-in account.' }),
+    });
   } catch (error) {
     console.error('❌ POST /api/auth/verify-password error:', error);
     res.status(500).json({ valid: false, error: error.message || 'Server error' });
@@ -11895,6 +11909,9 @@ app.get('/api/auth/direct-session', async (req, res) => {
 const WEBSITE_SSO_VALIDATE_URL =
   process.env.DFP_WEBSITE_SSO_VALIDATE_URL ||
   `${(process.env.DFP_WEBSITE_URL || 'https://dfp-neo.com').replace(/\/+$/, '')}/api/auth/validate-token`;
+const WEBSITE_PASSWORD_VERIFY_URL =
+  process.env.DFP_WEBSITE_PASSWORD_VERIFY_URL ||
+  `${new URL(WEBSITE_SSO_VALIDATE_URL).origin}/api/auth/direct-login`;
 
 function normaliseSsoRole(role) {
   const cleanRole = String(role || '').trim().toUpperCase();
@@ -11922,6 +11939,43 @@ async function validateWebsiteSsoToken(authToken, userId) {
     throw error;
   }
   return data.user;
+}
+
+async function verifyWebsitePassword(userId, password) {
+  const response = await fetch(WEBSITE_PASSWORD_VERIFY_URL, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      userId,
+      password,
+      purpose: 'reauthentication',
+    }),
+  });
+  const data = await response.json().catch(() => null);
+  const verifiedUserId = String(data?.user?.userId || data?.user?.username || '').trim();
+  const websiteSessionToken = String(data?.token || data?.sessionToken || '').trim();
+  const valid = response.ok
+    && (data?.valid === true || Boolean(websiteSessionToken))
+    && verifiedUserId === String(userId || '').trim();
+
+  // The current website login route returns a short-lived session as proof of
+  // successful authentication. Remove that temporary session immediately; the
+  // DFP-NEO app retains and continues using its own existing session.
+  if (websiteSessionToken) {
+    try {
+      await fetch(WEBSITE_PASSWORD_VERIFY_URL, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${websiteSessionToken}` },
+      });
+    } catch (cleanupError) {
+      console.warn('⚠️ Temporary website reauthentication session cleanup failed:', cleanupError.message);
+    }
+  }
+
+  return valid;
 }
 
 async function findOrCreateSsoUser(db, websiteUser) {
