@@ -9808,13 +9808,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const ruleAircraftTypeCode = normaliseUnitCode(rule.aircraftTypeCode);
     const ruleParentOrganisationCode = normaliseUnitCode(rule.parentOrganisationCode);
     const ruleModel = rule.operationalModel ? normaliseOperationalModel(rule.operationalModel) : '';
-    return Boolean(
-      (ruleUnitCode && visibilityUnitSet.has(ruleUnitCode))
-      || (ruleLocationCode && visibilityLocationCode && ruleLocationCode === visibilityLocationCode)
-      || (ruleAircraftTypeCode && visibilityAircraftTypeSet.has(ruleAircraftTypeCode))
-      || (ruleParentOrganisationCode && visibilityParentOrganisationCode && ruleParentOrganisationCode === visibilityParentOrganisationCode)
-      || (ruleModel && activeSettingsVisibilityModels.has(ruleModel)),
-    );
+    if (ruleUnitCode && !visibilityUnitSet.has(ruleUnitCode)) return false;
+    if (ruleLocationCode && ruleLocationCode !== visibilityLocationCode) return false;
+    if (ruleAircraftTypeCode && !visibilityAircraftTypeSet.has(ruleAircraftTypeCode)) return false;
+    if (ruleParentOrganisationCode && ruleParentOrganisationCode !== visibilityParentOrganisationCode) return false;
+    if (ruleModel && !activeSettingsVisibilityModels.has(ruleModel)) return false;
+    return true;
   };
   const isMasterLmpCatalogueEntryVisibleForActiveContext = (entry: PlatformMasterLmpCatalogueEntry) => {
     if (!settingsVisibilityEnabled) return true;
