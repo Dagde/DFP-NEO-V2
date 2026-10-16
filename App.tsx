@@ -18490,6 +18490,15 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const _fbEnd = startTime + scheduledDuration;
         const traineeEventCountKey = getBuildTraineeKey(trainee);
         const traineeCounts = getOrCreateEventCounts(traineeEventCountKey);
+        const scheduledTraineeCounts = getGeneratedEventsForPersonRecord(trainee, 'trainee').reduce(
+            (counts, event) => {
+                if (event.type === 'flight' || event.type === 'ftd') counts.flightFtd++;
+                else if (event.type === 'ground') counts.ground++;
+                else if (event.type === 'cpt') counts.cpt++;
+                return counts;
+            },
+            { flightFtd: 0, ground: 0, cpt: 0 }
+        );
         const remedialInstructorOverride = getRemedialInstructorOverride(trainee.fullName, syllabusItem.code);
         let forcedInstructorConflictDetails: string[] = [];
         const isFormationTraceAttempt = !!options.formationGroupId || (type === 'flight' && isMultiResourceFlightItem(syllabusItem) && !isRemedialSyllabusItem(syllabusItem));
@@ -18613,29 +18622,39 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const traineeFlightFtdLimit = options.traineeFlightFtdLimitOverride ?? bnfFlightLimit;
 
         if (type === 'flight' || type === 'ftd') {
-             if (traineeCounts.flightFtd >= traineeFlightFtdLimit) {
+             if (scheduledTraineeCounts.flightFtd >= traineeFlightFtdLimit) {
                  if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_EVENT_LIMIT_EXCEEDED');
                  return traceScheduleReject('TRAINEE_FLIGHT_FTD_LIMIT', {
-                     count: traineeCounts.flightFtd,
+                     count: scheduledTraineeCounts.flightFtd,
+                     mutableCount: traineeCounts.flightFtd,
                      limit: traineeFlightFtdLimit,
                      configuredLimit: bnfFlightLimit,
                      overrideApplied: options.traineeFlightFtdLimitOverride !== undefined,
                  });
              }
         } else {
-             if (traineeCounts.ground >= 2) return traceScheduleReject('TRAINEE_GROUND_LIMIT', { count: traineeCounts.ground, limit: 2 });
+             if (scheduledTraineeCounts.ground >= 2) return traceScheduleReject('TRAINEE_GROUND_LIMIT', {
+                 count: scheduledTraineeCounts.ground,
+                 mutableCount: traineeCounts.ground,
+                 limit: 2,
+             });
         }
 
         // Also check total event count for trainees (Flight + FTD + CPT + Ground = max 3 events for staff)
         // For BNF events, allow higher total limit to accommodate 2 night flights
         const bnfTotalLimit = isBnfEvent ? 4 : eventLimits.trainee.maxTotal;
         const traineeTotalLimit = options.traineeTotalLimitOverride ?? bnfTotalLimit;
-        if ((traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt) >= traineeTotalLimit) {
+        if ((scheduledTraineeCounts.flightFtd + scheduledTraineeCounts.ground + scheduledTraineeCounts.cpt) >= traineeTotalLimit) {
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_TOTAL_LIMIT_EXCEEDED');
             return traceScheduleReject('TRAINEE_TOTAL_LIMIT', {
-                flightFtd: traineeCounts.flightFtd,
-                ground: traineeCounts.ground,
-                cpt: traineeCounts.cpt,
+                flightFtd: scheduledTraineeCounts.flightFtd,
+                ground: scheduledTraineeCounts.ground,
+                cpt: scheduledTraineeCounts.cpt,
+                mutableCounts: {
+                    flightFtd: traineeCounts.flightFtd,
+                    ground: traineeCounts.ground,
+                    cpt: traineeCounts.cpt,
+                },
                 limit: traineeTotalLimit,
                 configuredLimit: bnfTotalLimit,
                 overrideApplied: options.traineeTotalLimitOverride !== undefined,
