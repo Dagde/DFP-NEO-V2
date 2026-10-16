@@ -20147,23 +20147,27 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         preferredWindowIds: string[];
     };
 
-    const buildGroupGroundCandidates = (groundNextList: Trainee[]): GroupGroundCandidate[] => {
+    const buildGroupGroundCandidates = (
+        groundList: Trainee[],
+        eventPosition: 'next' | 'plusOne' = 'next'
+    ): GroupGroundCandidate[] => {
         const candidatesByKey = new Map<string, GroupGroundCandidate>();
-        for (const trainee of groundNextList) {
-            const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
-            if (!next || classifyBuildTrainingEvent(next).bucket !== 'ground') continue;
+        for (const trainee of groundList) {
+            const event = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.[eventPosition];
+            if (!event || classifyBuildTrainingEvent(event).bucket !== 'ground') continue;
 
-            const schedulingGroup = getGroundEventSchedulingRuleForItem(buildGroundEventSchedulingSettings, next);
-            if (!isLmpGroupEventEnabled((next as any).groupEvent) && !schedulingGroup.explicitGroup) continue;
+            const schedulingGroup = getGroundEventSchedulingRuleForItem(buildGroundEventSchedulingSettings, event);
+            if (!isLmpGroupEventEnabled((event as any).groupEvent) && !schedulingGroup.explicitGroup) continue;
             const eventType = schedulingGroup.groupName;
             const rule = schedulingGroup.rule;
             if (rule.mode === 'manual') {
                 if (neoBuildDiag.groupGroundScheduling.skips.length < 220) {
                     neoBuildDiag.groupGroundScheduling.skips.push({
                         reason: 'SETTINGS_MANUAL',
+                        eventPosition,
                         trainee: trainee.fullName,
                         course: trainee.course,
-                        event: next.code || next.id || null,
+                        event: event.code || event.id || null,
                         eventType,
                         explicitGroup: Boolean(schedulingGroup.explicitGroup),
                     });
@@ -20171,12 +20175,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 continue;
             }
 
-            const eventKey = getGroupGroundEventKey(next);
+            const eventKey = getGroupGroundEventKey(event);
             if (!eventKey) continue;
             const course = String(trainee.course || 'Unassigned').trim() || 'Unassigned';
-            const candidateKey = [course.toUpperCase(), eventType.toUpperCase(), eventKey].join('::');
+            const candidateKey = [eventPosition.toUpperCase(), course.toUpperCase(), eventType.toUpperCase(), eventKey].join('::');
             if (!candidatesByKey.has(candidateKey)) {
-                const entireCourse = isLmpGroupEventEnabled((next as any).groupEntireCourse);
+                const entireCourse = isLmpGroupEventEnabled((event as any).groupEntireCourse);
                 const attendeePool = entireCourse
                     ? activeTrainees.filter(candidate => String(candidate.course || '').trim() === course)
                     : [];
@@ -20185,12 +20189,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     eventType,
                     mode: rule.mode,
                     course,
-                    syllabusItem: next,
+                    syllabusItem: event,
                     readyTrainees: [],
                     attendeePool,
-                    minimumToSchedule: parsePositiveGroupInteger((next as any).minimumToSchedule) || 1,
-                    groupSizeMin: parsePositiveGroupInteger((next as any).groupSizeMin) || 1,
-                    groupSizeMax: parsePositiveGroupInteger((next as any).groupSizeMax),
+                    minimumToSchedule: parsePositiveGroupInteger((event as any).minimumToSchedule) || 1,
+                    groupSizeMin: parsePositiveGroupInteger((event as any).groupSizeMin) || 1,
+                    groupSizeMax: parsePositiveGroupInteger((event as any).groupSizeMax),
                     entireCourse,
                     preferredWindowIds: rule.preferredWindows,
                 });
@@ -20227,6 +20231,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
         neoBuildDiag.groupGroundScheduling.candidates = candidates.slice(0, 220).map(candidate => ({
             key: candidate.key,
+            eventPosition,
             event: getGroupGroundCandidateEventLabel(candidate.syllabusItem),
             eventType: candidate.eventType,
             course: candidate.course,
@@ -20566,16 +20571,20 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         return false;
     };
 
-    const scheduleGroupGroundNextEvents = async (groundNextList: Trainee[]): Promise<Trainee[]> => {
-        const candidates = buildGroupGroundCandidates(groundNextList);
+    const scheduleGroupGroundEvents = async (
+        groundList: Trainee[],
+        eventPosition: 'next' | 'plusOne'
+    ): Promise<Trainee[]> => {
+        const candidates = buildGroupGroundCandidates(groundList, eventPosition);
         if (candidates.length === 0) {
             neoBuildDiag.groupGroundScheduling.summary = {
+                eventPosition,
                 candidates: 0,
                 placements: 0,
                 coveredNextEvents: 0,
                 notes: neoBuildDiag.groupGroundScheduling.notes.length,
             };
-            return groundNextList;
+            return groundList;
         }
 
         await recordProgress({
@@ -20592,11 +20601,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             await tryPlaceGroupGroundCandidate(candidates[index], index + 1, candidates.length);
         }
 
-        const remaining = groundNextList.filter(trainee => {
-            const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
-            return !isGroupGroundCovered(trainee, next);
+        const remaining = groundList.filter(trainee => {
+            const event = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.[eventPosition];
+            return !isGroupGroundCovered(trainee, event);
         });
         neoBuildDiag.groupGroundScheduling.summary = {
+            eventPosition,
             candidates: candidates.length,
             placements: neoBuildDiag.groupGroundScheduling.placements.length,
             coveredNextEvents: groupGroundCoveredNextKeys.size,
@@ -20609,6 +20619,28 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         saveNeoBuildDiag('group-ground-scheduling');
         return remaining;
     };
+
+    const hasPlacedNextEventForTrainee = (trainee: Trainee): boolean => {
+        const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
+        if (!next) return false;
+        const nextTokens = new Set([
+            next.code,
+            next.id,
+            next.masterEventId,
+        ].map(normalizeLmpEventId).filter(Boolean));
+        return getGeneratedEventsForPersonRecord(trainee, 'trainee').some(event => {
+            const eventTokens = [
+                event.flightNumber,
+                (event as any).masterEventId,
+                (event as any).syllabusItemId,
+            ].map(normalizeLmpEventId).filter(Boolean);
+            return eventTokens.some(token => nextTokens.has(token));
+        });
+    };
+
+    const filterToPlacedNextEvents = (traineeList: Trainee[]): Trainee[] => (
+        traineeList.filter(hasPlacedNextEventForTrainee)
+    );
 
     const filterOutGroupedGroundPlusOneEvents = (groundPlusOneList: Trainee[]): Trainee[] => {
         return groundPlusOneList.filter(trainee => {
@@ -26027,8 +26059,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     }
 
     await recordProgress({ message: 'Scheduling Group Ground Events...', percentage: 60 });
-    const groundNextAfterGroupScheduling = await scheduleGroupGroundNextEvents(
-        applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground), 'ground-group-next')
+    const groundNextAfterGroupScheduling = await scheduleGroupGroundEvents(
+        applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground), 'ground-group-next'),
+        'next'
     );
 
     // 5. Schedule FTD Events: a) Highest Priority, b) Next Events
@@ -26075,10 +26108,18 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         false
     );
 
+    const groundPlusOneAfterGroupScheduling = await scheduleGroupGroundEvents(
+        applyCoursePriority(
+            filterToPlacedNextEvents(filterOutBnfTrainees(nextPlusOneLists.ground)),
+            'ground-group-plus-one'
+        ),
+        'plusOne'
+    );
+
     // 7. Schedule Day Flight Events: Plus-One
     await recordProgress({ message: 'Scheduling Day Flight Events (Plus-One)...', percentage: 78 });
     await scheduleList(
-        applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.flight), 'day-flight-plus-one'),
+        applyCoursePriority(filterToPlacedNextEvents(filterOutBnfTrainees(nextPlusOneLists.flight)), 'day-flight-plus-one'),
         'flight',
         true,
         flyingStartTime,
@@ -26092,7 +26133,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     // Each BNF trainee can fly up to 2 night flights (special limit for BNF)
     if(nextEventLists.bnf.length >= 2) {
          await recordProgress({ message: 'Scheduling Night Flight Events (Plus-One)...', percentage: 80 });
-         const bnfWaveTwoList = nextEventLists.bnf.filter(trainee => {
+         const bnfWaveTwoList = filterToPlacedNextEvents(nextEventLists.bnf).filter(trainee => {
             const { plusOne } = traineeNextEventMap.get(getBuildTraineeKey(trainee)) || { plusOne: null };
             return plusOne && plusOne.code.startsWith('BNF') && plusOne.type === 'Flight';
          });
@@ -26102,7 +26143,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     // 8. Schedule FTD Events: Plus-One
     await recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
     await scheduleList(
-        applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd), 'ftd-plus-one'),
+        applyCoursePriority(filterToPlacedNextEvents(filterOutBnfTrainees(nextPlusOneLists.ftd)), 'ftd-plus-one'),
         'ftd',
         true,
         ftdStartTime,
@@ -26114,7 +26155,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     // 9. Schedule CPT/Ground Events: Plus-One
     await recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
     await scheduleList(
-        applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt), 'cpt-plus-one'),
+        applyCoursePriority(filterToPlacedNextEvents(filterOutBnfTrainees(nextPlusOneLists.cpt)), 'cpt-plus-one'),
         'cpt',
         true,
         flyingStartTime,
@@ -26125,7 +26166,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     await recordProgress({ message: 'Scheduling Ground Events (Plus-One)...', percentage: 86 });
     await scheduleList(
-        applyCoursePriority(filterOutGroupedGroundPlusOneEvents(filterOutBnfTrainees(nextPlusOneLists.ground)), 'ground-plus-one'),
+        applyCoursePriority(filterOutGroupedGroundPlusOneEvents(groundPlusOneAfterGroupScheduling), 'ground-plus-one'),
         'ground',
         true,
         flyingStartTime,
