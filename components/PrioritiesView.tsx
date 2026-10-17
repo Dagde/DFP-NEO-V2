@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { TrashIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, MagnifyingGlassIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest, FlyingWindowExclusionPeriod, FlyingWindowExclusionRestriction, CrewRequirement, StandardMissionProfile, type FormationCallsign } from '../types';
 import UnavailabilitiesWindow from './UnavailabilitiesWindow';
 import AuditButton from './AuditButton';
@@ -645,8 +645,7 @@ const TaskingProfileInput: React.FC<{
   const configuredProfileCount = taskProfiles.filter((profile) => String(profile || '').trim()).length;
   const showSuggestions = isOpen;
   const settingsPathText = 'Settings → Organisation & Operations → Directed Task Lists';
-  const settingsLinkClass = 'inline-flex rounded border border-cyan-500/20 bg-cyan-500/5 px-1.5 py-0.5 font-semibold text-slate-300 underline decoration-cyan-500/25 underline-offset-2 transition hover:border-cyan-400/30 hover:bg-cyan-500/10 hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60';
-  const settingsPathLink = onOpenDirectedTaskLists ? (
+  const settingsAction = onOpenDirectedTaskLists ? (
     <button
       type="button"
       onMouseDown={(event) => {
@@ -655,12 +654,16 @@ const TaskingProfileInput: React.FC<{
         setIsOpen(false);
         onOpenDirectedTaskLists();
       }}
-      className={settingsLinkClass}
+      className="mt-3 flex w-full items-center gap-3 rounded-md border border-cyan-400/50 bg-cyan-500/10 px-3 py-2 text-left text-cyan-50 transition hover:border-cyan-300 hover:bg-cyan-500/20 focus:outline-none focus:ring-2 focus:ring-cyan-400/70"
     >
-      {settingsPathText}
+      <Cog6ToothIcon className="h-5 w-5 shrink-0 text-cyan-300" aria-hidden="true" />
+      <span className="min-w-0">
+        <span className="block text-xs font-bold">Open Directed Task Lists</span>
+        <span className="block truncate text-[10px] text-slate-300">{settingsPathText}</span>
+      </span>
     </button>
   ) : (
-    <span>{settingsPathText}</span>
+    <div className="mt-3 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-[10px] text-slate-300">{settingsPathText}</div>
   );
 
   const selectProfile = (profile: string) => {
@@ -670,11 +673,15 @@ const TaskingProfileInput: React.FC<{
 
   return (
     <div className="relative">
-      <div>
+      <div className="relative">
+        <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
         <input
           type="text"
           value={value}
           autoComplete="off"
+          role="combobox"
+          aria-expanded={showSuggestions}
+          aria-autocomplete="list"
           onFocus={() => setIsOpen(true)}
           onBlur={() => setIsOpen(false)}
           onChange={(event) => {
@@ -682,38 +689,51 @@ const TaskingProfileInput: React.FC<{
             setIsOpen(true);
           }}
           placeholder="Directed task"
-          className="h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
+          className="h-10 w-full rounded-md border border-slate-600 bg-slate-800 py-2 pl-9 pr-3 text-sm font-semibold text-white outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
         />
       </div>
       {showSuggestions && (
-        <div className="absolute left-0 top-full z-[80] mt-1 max-h-64 w-[280px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40">
+        <div className="absolute left-0 top-full z-[80] mt-2 w-full min-w-[18rem] overflow-hidden rounded-lg border border-cyan-400/65 bg-slate-950 shadow-[0_18px_40px_rgba(0,0,0,0.55)]">
+          <div className="flex items-center justify-between border-b border-cyan-500/25 bg-cyan-950/80 px-3 py-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100">Saved Directed Tasks</span>
+            <span className="rounded border border-cyan-400/25 bg-slate-950/60 px-1.5 py-0.5 text-[10px] font-semibold text-slate-300">
+              {configuredProfileCount} configured
+            </span>
+          </div>
           {suggestions.length > 0 ? (
-            suggestions.map((profile) => (
-              <button
-                key={profile}
-                type="button"
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  selectProfile(profile);
-                }}
-                className="block w-full border-b border-slate-800 px-2 py-1.5 text-left last:border-b-0 hover:bg-cyan-500/15 focus:bg-cyan-500/15 focus:outline-none"
-              >
-                <span className="block text-xs font-bold text-cyan-100">{profile}</span>
-                <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
-                  {operationalModelLabel} directed task
-                </span>
-              </button>
-            ))
+            <div className="max-h-64 space-y-1 overflow-y-auto p-1.5" role="listbox">
+              {suggestions.map((profile) => (
+                <button
+                  key={profile}
+                  type="button"
+                  role="option"
+                  aria-selected={value.trim() === profile}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    selectProfile(profile);
+                  }}
+                  className="block w-full rounded-md border border-transparent bg-slate-900/70 px-3 py-2 text-left transition hover:border-cyan-400/45 hover:bg-cyan-500/15 focus:border-cyan-400/60 focus:bg-cyan-500/15 focus:outline-none"
+                >
+                  <span className="block text-sm font-bold text-cyan-50">{profile}</span>
+                  <span className="mt-0.5 block whitespace-normal break-words text-[10px] leading-tight text-slate-400">
+                    {operationalModelLabel} directed task
+                  </span>
+                </button>
+              ))}
+            </div>
           ) : (
-            <div className="px-2 py-2 text-left">
-              <span className="block text-xs font-bold text-cyan-100">
-                {configuredProfileCount > 0 ? 'No matching directed task' : 'No directed task names configured'}
-              </span>
-              <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
-                {configuredProfileCount > 0
-                  ? <>Keep typing to enter this task manually, or open {settingsPathLink} to add it to the saved list.</>
-                  : <>{operationalModelLabel} has no saved directed task names yet. Open {settingsPathLink} to add saved names, or type this one manually.</>}
-              </span>
+            <div className="p-3 text-left">
+              <div className="rounded-md border border-amber-400/35 bg-amber-500/10 p-3">
+                <span className="block text-sm font-bold text-amber-100">
+                  {configuredProfileCount > 0 ? 'No saved task matches this text' : 'No directed task names configured'}
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed text-slate-300">
+                  {configuredProfileCount > 0
+                    ? 'Keep typing to enter a one-off task, or add this name to the saved list in Settings.'
+                    : `${operationalModelLabel} has no saved directed task names. Add reusable names in Settings, or type a one-off task here.`}
+                </span>
+              </div>
+              {settingsAction}
             </div>
           )}
         </div>

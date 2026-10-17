@@ -18048,7 +18048,7 @@ function ArrowTopRightOnSquareIcon({
     d: "M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
   }));
 }
-const ForwardRef$b = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
+const ForwardRef$c = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
 function ChartBarIcon({
   title,
   titleId,
@@ -18072,7 +18072,7 @@ function ChartBarIcon({
     d: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
   }));
 }
-const ForwardRef$a = /* @__PURE__ */ reactExports.forwardRef(ChartBarIcon);
+const ForwardRef$b = /* @__PURE__ */ reactExports.forwardRef(ChartBarIcon);
 function ClockIcon({
   title,
   titleId,
@@ -18096,7 +18096,35 @@ function ClockIcon({
     d: "M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
   }));
 }
-const ForwardRef$9 = /* @__PURE__ */ reactExports.forwardRef(ClockIcon);
+const ForwardRef$a = /* @__PURE__ */ reactExports.forwardRef(ClockIcon);
+function Cog6ToothIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
+  }), /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+  }));
+}
+const ForwardRef$9 = /* @__PURE__ */ reactExports.forwardRef(Cog6ToothIcon);
 function ComputerDesktopIcon({
   title,
   titleId,
@@ -78531,8 +78559,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
   const configuredProfileCount = taskProfiles.filter((profile) => String(profile || "").trim()).length;
   const showSuggestions = isOpen;
   const settingsPathText = "Settings → Organisation & Operations → Directed Task Lists";
-  const settingsLinkClass = "inline-flex rounded border border-cyan-500/20 bg-cyan-500/5 px-1.5 py-0.5 font-semibold text-slate-300 underline decoration-cyan-500/25 underline-offset-2 transition hover:border-cyan-400/30 hover:bg-cyan-500/10 hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60";
-  const settingsPathLink = onOpenDirectedTaskLists ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+  const settingsAction = onOpenDirectedTaskLists ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "button",
     {
       type: "button",
@@ -78542,62 +78569,79 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
         setIsOpen(false);
         onOpenDirectedTaskLists();
       },
-      className: settingsLinkClass,
-      children: settingsPathText
+      className: "mt-3 flex w-full items-center gap-3 rounded-md border border-cyan-400/50 bg-cyan-500/10 px-3 py-2 text-left text-cyan-50 transition hover:border-cyan-300 hover:bg-cyan-500/20 focus:outline-none focus:ring-2 focus:ring-cyan-400/70",
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$9, { className: "h-5 w-5 shrink-0 text-cyan-300", "aria-hidden": "true" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold", children: "Open Directed Task Lists" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[10px] text-slate-300", children: settingsPathText })
+        ] })
+      ]
     }
-  ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: settingsPathText });
+  ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-[10px] text-slate-300", children: settingsPathText });
   const selectProfile = (profile) => {
     onChange(profile);
     setIsOpen(false);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "input",
-      {
-        type: "text",
-        value,
-        autoComplete: "off",
-        onFocus: () => setIsOpen(true),
-        onBlur: () => setIsOpen(false),
-        onChange: (event) => {
-          onChange(event.target.value);
-          setIsOpen(true);
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$6, { className: "pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400", "aria-hidden": "true" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          type: "text",
+          value,
+          autoComplete: "off",
+          role: "combobox",
+          "aria-expanded": showSuggestions,
+          "aria-autocomplete": "list",
+          onFocus: () => setIsOpen(true),
+          onBlur: () => setIsOpen(false),
+          onChange: (event) => {
+            onChange(event.target.value);
+            setIsOpen(true);
+          },
+          placeholder: "Directed task",
+          className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 py-2 pl-9 pr-3 text-sm font-semibold text-white outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
+        }
+      )
+    ] }),
+    showSuggestions && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-0 top-full z-[80] mt-2 w-full min-w-[18rem] overflow-hidden rounded-lg border border-cyan-400/65 bg-slate-950 shadow-[0_18px_40px_rgba(0,0,0,0.55)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-cyan-500/25 bg-cyan-950/80 px-3 py-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100", children: "Saved Directed Tasks" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-400/25 bg-slate-950/60 px-1.5 py-0.5 text-[10px] font-semibold text-slate-300", children: [
+          configuredProfileCount,
+          " configured"
+        ] })
+      ] }),
+      suggestions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-64 space-y-1 overflow-y-auto p-1.5", role: "listbox", children: suggestions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          type: "button",
+          role: "option",
+          "aria-selected": value.trim() === profile,
+          onMouseDown: (event) => {
+            event.preventDefault();
+            selectProfile(profile);
+          },
+          className: "block w-full rounded-md border border-transparent bg-slate-900/70 px-3 py-2 text-left transition hover:border-cyan-400/45 hover:bg-cyan-500/15 focus:border-cyan-400/60 focus:bg-cyan-500/15 focus:outline-none",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-bold text-cyan-50", children: profile }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block whitespace-normal break-words text-[10px] leading-tight text-slate-400", children: [
+              operationalModelLabel,
+              " directed task"
+            ] })
+          ]
         },
-        placeholder: "Directed task",
-        className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
-      }
-    ) }),
-    showSuggestions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-[80] mt-1 max-h-64 w-[280px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40", children: suggestions.length > 0 ? suggestions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "button",
-      {
-        type: "button",
-        onMouseDown: (event) => {
-          event.preventDefault();
-          selectProfile(profile);
-        },
-        className: "block w-full border-b border-slate-800 px-2 py-1.5 text-left last:border-b-0 hover:bg-cyan-500/15 focus:bg-cyan-500/15 focus:outline-none",
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: profile }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
-            operationalModelLabel,
-            " directed task"
-          ] })
-        ]
-      },
-      profile
-    )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching directed task" : "No directed task names configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        "Keep typing to enter this task manually, or open ",
-        settingsPathLink,
-        " to add it to the saved list."
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        operationalModelLabel,
-        " has no saved directed task names yet. Open ",
-        settingsPathLink,
-        " to add saved names, or type this one manually."
-      ] }) })
-    ] }) })
+        profile
+      )) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 text-left", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-amber-400/35 bg-amber-500/10 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-bold text-amber-100", children: configuredProfileCount > 0 ? "No saved task matches this text" : "No directed task names configured" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs leading-relaxed text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter a one-off task, or add this name to the saved list in Settings." : `${operationalModelLabel} has no saved directed task names. Add reusable names in Settings, or type a one-off task here.` })
+        ] }),
+        settingsAction
+      ] })
+    ] })
   ] });
 };
 const taskingPanelClass = "flex min-h-[8rem] min-w-0 flex-col justify-between rounded-lg border border-slate-700/80 bg-slate-950/55 p-3 shadow-inner shadow-black/20";
@@ -89538,7 +89582,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "flight",
       title: "Flight events per day",
       subtitle: "Scheduled flying events counted from published DFP snapshots.",
-      icon: ForwardRef$a,
+      icon: ForwardRef$b,
       color: "border-blue-400/40 bg-blue-400/10 text-blue-200",
       series: flightPoints,
       summary: compactNumber(valueSum(flightPoints)),
@@ -89548,7 +89592,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "flightHours",
       title: "Flight hours per day",
       subtitle: "Total scheduled flying hours from published DFP snapshots.",
-      icon: ForwardRef$9,
+      icon: ForwardRef$a,
       color: "border-sky-400/40 bg-sky-400/10 text-sky-200",
       unit: "h",
       series: flightHourPoints,
@@ -89569,7 +89613,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "simulatorHours",
       title: "Simulator hours per day",
       subtitle: "Total scheduled simulator hours by published DFP day.",
-      icon: ForwardRef$9,
+      icon: ForwardRef$a,
       color: "border-teal-400/40 bg-teal-400/10 text-teal-200",
       unit: "h",
       series: simHourPoints,
@@ -89620,7 +89664,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "staffTotal",
       title: "Staff total events",
       subtitle: selectedStaff ? `${selectedStaff} all scheduled events per day.` : "Open to select staff and inspect total load.",
-      icon: ForwardRef$9,
+      icon: ForwardRef$a,
       color: "border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200",
       series: staffTotalPoints,
       summary: compactNumber(valueSum(staffTotalPoints)),
@@ -89930,7 +89974,7 @@ const AircraftUnserviceabilityTile = ({ summary, loading, onOpen }) => /* @__PUR
     children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-orange-300/40 bg-orange-300/10 text-orange-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef, { className: "h-8 w-8 opacity-75" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: "Aircraft unserviceability" }),
@@ -90106,7 +90150,7 @@ const MetricTile = ({ metric, onOpen, cancellationCategories }) => {
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex h-14 w-14 items-center justify-center rounded-lg border ${metric.color}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Icon, { className: "h-8 w-8" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: metric.title }),
@@ -90221,8 +90265,8 @@ const CourseOutcomeTile = ({ data, onOpen }) => {
       className: "group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400",
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-violet-400/40 bg-violet-400/10 text-violet-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$a, { className: "h-8 w-8 opacity-60" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-violet-400/40 bg-violet-400/10 text-violet-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-8 w-8 opacity-60" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: "Course status comparison" }),
@@ -90391,8 +90435,8 @@ const CoursePassRateTile = ({ data, selectedLmp, date, onOpen }) => {
       className: "group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400",
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$a, { className: "h-8 w-8 opacity-60" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-8 w-8 opacity-60" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: "Unit pass rates" }),
