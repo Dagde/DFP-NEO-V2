@@ -2705,15 +2705,15 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [staffCurrencyCrewMode, setStaffCurrencyCrewMode] = useState<'withOtherPilot' | 'solo'>('withOtherPilot');
   const [staffCurrencyRoleFilter, setStaffCurrencyRoleFilter] = useState('Pilot');
   const [isStaffCurrencyBuilderOpen, setIsStaffCurrencyBuilderOpen] = useState(false);
-  type EventsPriorityTab = 'requests' | 'trainee' | 'bulk' | 'events';
-  const [activeEventsPriorityTab, setActiveEventsPriorityTab] = useState<EventsPriorityTab>('requests');
+  type CurrencyPriorityTab = 'requests' | 'trainee' | 'bulk';
+  const [activeCurrencyPriorityTab, setActiveCurrencyPriorityTab] = useState<CurrencyPriorityTab>('requests');
   const [openCurrencyDraftId, setOpenCurrencyDraftId] = useState<string | null>(null);
   const [editingCurrencyDraftIds, setEditingCurrencyDraftIds] = useState<Set<string>>(new Set());
   useEffect(() => {
-    if (isFixedCrewModel && (activeEventsPriorityTab === 'trainee' || activeEventsPriorityTab === 'bulk')) {
-      setActiveEventsPriorityTab('requests');
+    if (isFixedCrewModel && (activeCurrencyPriorityTab === 'trainee' || activeCurrencyPriorityTab === 'bulk')) {
+      setActiveCurrencyPriorityTab('requests');
     }
-  }, [activeEventsPriorityTab, isFixedCrewModel]);
+  }, [activeCurrencyPriorityTab, isFixedCrewModel]);
   const legacyCurrencyDraftStorageKey = 'neoCurrencyDraftEvents';
   const currencyDraftStorageKey = 'neoCurrencyDraftEvents.v2';
   const [taskingAirfieldCatalogue, setTaskingAirfieldCatalogue] = useState<TaskingAirfieldCatalogueEntry[]>([]);
@@ -5844,29 +5844,45 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             />
         </div>
 
+        <div className="saved-special-events-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-sky-400">Saved Special Events</h2>
+              <button
+                type="button"
+                onClick={() => onNavigateToSettingsSection?.({
+                  sectionId: 'standard-missions',
+                  focusSubsectionId: 'platform-standard-missions',
+                })}
+                className="btn-aluminium-brushed flex h-[41px] w-[68px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight"
+              >
+                <span>Add &amp;<br />Delete</span>
+              </button>
+            </div>
+            {renderSavedSpecialEvents()}
+        </div>
+
         <section className="currency-events-priority-section space-y-5 rounded-xl border-2 border-amber-400/70 bg-amber-950/10 p-4 shadow-[0_0_0_1px_rgba(251,191,36,0.12),0_20px_42px_rgba(0,0,0,0.24)] sm:p-5">
           <div className="flex flex-col gap-4 border-b border-amber-400/25 pb-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-200/80">Events &amp; Currency Priorities</p>
-              <h2 className="mt-1 text-xl font-semibold text-white">Build Priority Events</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-200/80">Currency Priorities</p>
+              <h2 className="mt-1 text-xl font-semibold text-white">Build Currency Events</h2>
             </div>
-            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4" role="tablist" aria-label="Priority event builders">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="tablist" aria-label="Currency event builders">
               {([
                 { key: 'requests', number: '1', label: continuationCurrencyRequestsLabel, className: 'bg-emerald-500/25' },
                 ...(!isFixedCrewModel ? [
                   { key: 'trainee', number: '2', label: 'Trainee Currency', className: 'bg-emerald-500/40' },
                   { key: 'bulk', number: '3', label: 'Bulk Currency Builder', className: 'bg-emerald-500/55' },
                 ] : []),
-                { key: 'events', number: '4', label: 'Events', className: 'bg-emerald-500/70' },
-              ] as Array<{ key: EventsPriorityTab; number: string; label: string; className: string }>).map(tab => {
-                const isActive = activeEventsPriorityTab === tab.key;
+              ] as Array<{ key: CurrencyPriorityTab; number: string; label: string; className: string }>).map(tab => {
+                const isActive = activeCurrencyPriorityTab === tab.key;
                 return (
                   <button
                     key={tab.key}
                     type="button"
                     role="tab"
                     aria-selected={isActive}
-                    onClick={() => setActiveEventsPriorityTab(tab.key)}
+                    onClick={() => setActiveCurrencyPriorityTab(tab.key)}
                     className={`flex min-h-[52px] items-center gap-2 rounded-md border px-3 py-2 text-left text-xs font-semibold text-white transition ${tab.className} ${isActive ? 'border-emerald-200 ring-2 ring-emerald-300/70' : 'border-emerald-300/25 hover:border-emerald-200/60'}`}
                   >
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-white/25 bg-slate-950/35 text-sm font-black">{tab.number}</span>
@@ -5877,7 +5893,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>
           </div>
 
-        {activeEventsPriorityTab === 'requests' && (
+        {activeCurrencyPriorityTab === 'requests' && (
         <div className="specific-currency-card rounded-lg border border-amber-400/30 bg-slate-900 shadow-lg p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-sky-400">{continuationCurrencyRequestsLabel}</h2>
@@ -5898,26 +5914,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         </div>
         )}
 
-        {activeEventsPriorityTab === 'events' && (
-        <div className="saved-special-events-card rounded-lg border border-amber-400/30 bg-slate-900 shadow-lg p-6">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-sky-400">Saved Special Events</h2>
-              <button
-                type="button"
-                onClick={() => onNavigateToSettingsSection?.({
-                  sectionId: 'standard-missions',
-                  focusSubsectionId: 'platform-standard-missions',
-                })}
-                className="btn-aluminium-brushed flex h-[41px] w-[68px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight"
-              >
-                <span>Add &amp;<br />Delete</span>
-              </button>
-            </div>
-            {renderSavedSpecialEvents()}
-        </div>
-        )}
-
-        {!isFixedCrewModel && activeEventsPriorityTab === 'trainee' && <div className="trainee-currency-events-card rounded-lg border border-amber-400/30 bg-slate-900 shadow-lg p-6">
+        {!isFixedCrewModel && activeCurrencyPriorityTab === 'trainee' && <div className="trainee-currency-events-card rounded-lg border border-amber-400/30 bg-slate-900 shadow-lg p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
                     <h2 className="text-xl font-semibold text-sky-400">Trainee Currency Events</h2>
@@ -6051,7 +6048,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>}
         </div>}
 
-        {!isFixedCrewModel && activeEventsPriorityTab === 'bulk' && (
+        {!isFixedCrewModel && activeCurrencyPriorityTab === 'bulk' && (
         <div className="bulk-currency-card rounded-lg border border-amber-400/30 bg-slate-900 shadow-lg p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>

@@ -80275,14 +80275,14 @@ const PrioritiesView = ({
   const [staffCurrencyCrewMode, setStaffCurrencyCrewMode] = reactExports.useState("withOtherPilot");
   const [staffCurrencyRoleFilter, setStaffCurrencyRoleFilter] = reactExports.useState("Pilot");
   const [isStaffCurrencyBuilderOpen, setIsStaffCurrencyBuilderOpen] = reactExports.useState(false);
-  const [activeEventsPriorityTab, setActiveEventsPriorityTab] = reactExports.useState("requests");
+  const [activeCurrencyPriorityTab, setActiveCurrencyPriorityTab] = reactExports.useState("requests");
   const [openCurrencyDraftId, setOpenCurrencyDraftId] = reactExports.useState(null);
   const [editingCurrencyDraftIds, setEditingCurrencyDraftIds] = reactExports.useState(/* @__PURE__ */ new Set());
   reactExports.useEffect(() => {
-    if (isFixedCrewModel && (activeEventsPriorityTab === "trainee" || activeEventsPriorityTab === "bulk")) {
-      setActiveEventsPriorityTab("requests");
+    if (isFixedCrewModel && (activeCurrencyPriorityTab === "trainee" || activeCurrencyPriorityTab === "bulk")) {
+      setActiveCurrencyPriorityTab("requests");
     }
-  }, [activeEventsPriorityTab, isFixedCrewModel]);
+  }, [activeCurrencyPriorityTab, isFixedCrewModel]);
   const legacyCurrencyDraftStorageKey = "neoCurrencyDraftEvents";
   const currencyDraftStorageKey = "neoCurrencyDraftEvents.v2";
   const [taskingAirfieldCatalogue, setTaskingAirfieldCatalogue] = reactExports.useState([]);
@@ -82840,28 +82840,49 @@ const PrioritiesView = ({
           }
         )
       ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "saved-special-events-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Saved Special Events" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => onNavigateToSettingsSection?.({
+                sectionId: "standard-missions",
+                focusSubsectionId: "platform-standard-missions"
+              }),
+              className: "btn-aluminium-brushed flex h-[41px] w-[68px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                "Add &",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                "Delete"
+              ] })
+            }
+          )
+        ] }),
+        renderSavedSpecialEvents()
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "currency-events-priority-section space-y-5 rounded-xl border-2 border-amber-400/70 bg-amber-950/10 p-4 shadow-[0_0_0_1px_rgba(251,191,36,0.12),0_20px_42px_rgba(0,0,0,0.24)] sm:p-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-4 border-b border-amber-400/25 pb-5", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-amber-200/80", children: "Events & Currency Priorities" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Build Priority Events" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-amber-200/80", children: "Currency Priorities" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Build Currency Events" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2 lg:grid-cols-4", role: "tablist", "aria-label": "Priority event builders", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 sm:grid-cols-3", role: "tablist", "aria-label": "Currency event builders", children: [
             { key: "requests", number: "1", label: continuationCurrencyRequestsLabel, className: "bg-emerald-500/25" },
             ...!isFixedCrewModel ? [
               { key: "trainee", number: "2", label: "Trainee Currency", className: "bg-emerald-500/40" },
               { key: "bulk", number: "3", label: "Bulk Currency Builder", className: "bg-emerald-500/55" }
-            ] : [],
-            { key: "events", number: "4", label: "Events", className: "bg-emerald-500/70" }
+            ] : []
           ].map((tab) => {
-            const isActive = activeEventsPriorityTab === tab.key;
+            const isActive = activeCurrencyPriorityTab === tab.key;
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
               {
                 type: "button",
                 role: "tab",
                 "aria-selected": isActive,
-                onClick: () => setActiveEventsPriorityTab(tab.key),
+                onClick: () => setActiveCurrencyPriorityTab(tab.key),
                 className: `flex min-h-[52px] items-center gap-2 rounded-md border px-3 py-2 text-left text-xs font-semibold text-white transition ${tab.className} ${isActive ? "border-emerald-200 ring-2 ring-emerald-300/70" : "border-emerald-300/25 hover:border-emerald-200/60"}`,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-7 w-7 shrink-0 items-center justify-center rounded border border-white/25 bg-slate-950/35 text-sm font-black", children: tab.number }),
@@ -82872,7 +82893,7 @@ const PrioritiesView = ({
             );
           }) })
         ] }),
-        activeEventsPriorityTab === "requests" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "specific-currency-card rounded-lg border border-amber-400/30 bg-slate-900 shadow-lg p-6", children: [
+        activeCurrencyPriorityTab === "requests" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "specific-currency-card rounded-lg border border-amber-400/30 bg-slate-900 shadow-lg p-6", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: continuationCurrencyRequestsLabel }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddSctRequest("flight"), className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -82886,29 +82907,7 @@ const PrioritiesView = ({
             sctFtds.length > 0 && renderSctRequestTable("ftd", sctFtds)
           ] }) })
         ] }),
-        activeEventsPriorityTab === "events" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "saved-special-events-card rounded-lg border border-amber-400/30 bg-slate-900 shadow-lg p-6", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Saved Special Events" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => onNavigateToSettingsSection?.({
-                  sectionId: "standard-missions",
-                  focusSubsectionId: "platform-standard-missions"
-                }),
-                className: "btn-aluminium-brushed flex h-[41px] w-[68px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                  "Add &",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                  "Delete"
-                ] })
-              }
-            )
-          ] }),
-          renderSavedSpecialEvents()
-        ] }),
-        !isFixedCrewModel && activeEventsPriorityTab === "trainee" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "trainee-currency-events-card rounded-lg border border-amber-400/30 bg-slate-900 shadow-lg p-6", children: [
+        !isFixedCrewModel && activeCurrencyPriorityTab === "trainee" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "trainee-currency-events-card rounded-lg border border-amber-400/30 bg-slate-900 shadow-lg p-6", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 mb-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Trainee Currency Events" }),
@@ -83043,7 +83042,7 @@ const PrioritiesView = ({
             ] })
           ] })
         ] }),
-        !isFixedCrewModel && activeEventsPriorityTab === "bulk" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bulk-currency-card rounded-lg border border-amber-400/30 bg-slate-900 shadow-lg p-6", children: [
+        !isFixedCrewModel && activeCurrencyPriorityTab === "bulk" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bulk-currency-card rounded-lg border border-amber-400/30 bg-slate-900 shadow-lg p-6", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 mb-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Bulk Currency Builder" }),
