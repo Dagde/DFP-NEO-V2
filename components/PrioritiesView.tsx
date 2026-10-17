@@ -684,9 +684,6 @@ const TaskingProfileInput: React.FC<{
           placeholder="Directed task"
           className="h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
         />
-        <div className="mt-1 text-[10px] leading-snug text-slate-400">
-          Saved directed task names are managed here: {settingsPathLink}.
-        </div>
       </div>
       {showSuggestions && (
         <div className="absolute left-0 top-full z-[80] mt-1 max-h-64 w-[280px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40">

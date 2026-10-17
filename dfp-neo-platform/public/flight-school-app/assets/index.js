@@ -78551,29 +78551,22 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
     setIsOpen(false);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "input",
-        {
-          type: "text",
-          value,
-          autoComplete: "off",
-          onFocus: () => setIsOpen(true),
-          onBlur: () => setIsOpen(false),
-          onChange: (event) => {
-            onChange(event.target.value);
-            setIsOpen(true);
-          },
-          placeholder: "Directed task",
-          className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[10px] leading-snug text-slate-400", children: [
-        "Saved directed task names are managed here: ",
-        settingsPathLink,
-        "."
-      ] })
-    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        type: "text",
+        value,
+        autoComplete: "off",
+        onFocus: () => setIsOpen(true),
+        onBlur: () => setIsOpen(false),
+        onChange: (event) => {
+          onChange(event.target.value);
+          setIsOpen(true);
+        },
+        placeholder: "Directed task",
+        className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
+      }
+    ) }),
     showSuggestions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-[80] mt-1 max-h-64 w-[280px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40", children: suggestions.length > 0 ? suggestions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "button",
       {
