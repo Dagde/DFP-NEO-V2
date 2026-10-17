@@ -44555,6 +44555,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const qualificationIds = getResolvedStaffQualificationIds(row);
       const hasExplicitQualificationAssignment = rowHasExplicitQualificationAssignment(row);
       const flags = qualificationsToFlags(String(row.qualifications || ""), qualificationIds);
+      const importedCallsign = String(row.callsign || "").trim().toUpperCase();
+      const importedCallsignNumber = Number(row.callsignNumber) || Number(importedCallsign.match(/(\d{1,3})$/)?.[1] || 0);
       return {
         id: `setup-staff-${index + 1}`,
         idNumber: normaliseWizardPersonnelId(row),
@@ -44563,9 +44565,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         role: row.position || row.role || "Instructor",
         category: row.category || "B",
         service: row.service || "",
-        callsign: row.callsign || "",
+        callsign: importedCallsign,
         secondaryCallsign: row.secondaryCallsign || "",
-        callsignNumber: Number(row.callsignNumber) || index + 1,
+        callsignNumber: importedCallsignNumber,
         isTestingOfficer: false,
         seatConfig: row.seatConfig || "ANY",
         isExecutive: false,
@@ -62103,16 +62105,16 @@ const parseImportedCallsign = (rawValue, unitCode, unitCallsignSettings) => {
     callsign: `${prefix}${String(callsignNumber).padStart(3, "0")}`
   };
 };
-const normaliseImportHeader = (value) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+const normaliseImportHeader$1 = (value) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 const getValueFromRow$1 = (row, possibleKeys) => {
   for (const key of possibleKeys) {
     if (row[key] !== void 0) return row[key];
   }
   const rowKeys = Object.keys(row);
   for (const key of possibleKeys) {
-    const normalisedKey = normaliseImportHeader(key);
+    const normalisedKey = normaliseImportHeader$1(key);
     for (const rowKey of rowKeys) {
-      if (normaliseImportHeader(rowKey) === normalisedKey) {
+      if (normaliseImportHeader$1(rowKey) === normalisedKey) {
         return row[rowKey];
       }
     }
@@ -62254,7 +62256,7 @@ const readWorkbookRows = async (file, skipExampleRow = false) => {
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
   const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
   const headerRowIndex = rawRows.findIndex((row) => {
-    const cells = row.map(normaliseImportHeader);
+    const cells = row.map(normaliseImportHeader$1);
     const hasName = cells.some((cell) => ["name", "fullname", "namesurnamefirstname"].includes(cell));
     const hasId = cells.some((cell) => ["personnelid", "serviceid", "employeeid", "employeenumber", "personnelnumber", "staffid", "id", "idnumber"].includes(cell));
     const hasCourse = cells.includes("course") || cells.some((cell) => cell.startsWith("coursenumber")) || cells.includes("courseprefix") && cells.includes("coursenumber");
@@ -96338,15 +96340,16 @@ const AddInstructorChoiceFlyout = ({ onClose, onIndividual, onBulk }) => {
     ] })
   ] }) });
 };
+const normaliseImportHeader = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
 const getValueFromRow = (row, possibleKeys) => {
   const rowKeys = Object.keys(row);
   for (const key of possibleKeys) {
     if (row[key] !== void 0) return row[key];
   }
   for (const key of possibleKeys) {
-    const lowerKey = key.toLowerCase().replace(/[\s/]/g, "");
+    const lowerKey = normaliseImportHeader(key);
     for (const rowKey of rowKeys) {
-      if (rowKey.toLowerCase().replace(/[\s/]/g, "") === lowerKey) {
+      if (normaliseImportHeader(rowKey) === lowerKey) {
         return row[rowKey];
       }
     }
@@ -96361,8 +96364,8 @@ const hasAnyHeader = (row, possibleKeys) => {
   const rowKeys = Object.keys(row);
   return possibleKeys.some((key) => {
     if (row[key] !== void 0) return true;
-    const lowerKey = key.toLowerCase().replace(/[\s/]/g, "");
-    return rowKeys.some((rowKey) => rowKey.toLowerCase().replace(/[\s/]/g, "") === lowerKey);
+    const lowerKey = normaliseImportHeader(key);
+    return rowKeys.some((rowKey) => normaliseImportHeader(rowKey) === lowerKey);
   });
 };
 const findStaffHeaderRowIndex = (rawRows) => {
@@ -96596,7 +96599,13 @@ const BulkUpdateFlyout = ({
           const fallbackUnit = normaliseImportedUnit(defaultUnitCode);
           if (fallbackUnit) parsedData.unit = fallbackUnit;
         }
-        const smartCallsign = getValueFromRow(row, ["Callsign", "Call Sign"]);
+        const smartCallsign = getValueFromRow(row, [
+          "Callsign",
+          "Call Sign",
+          "Callsign Number or Prefix Number",
+          "Callsign [number or prefix + number]",
+          "Primary Callsign"
+        ]);
         const callsignNumber = getValueFromRow(row, ["callsign number", "callsignnumber", "Callsign No", "Callsign Number"]);
         if (smartCallsign !== void 0 && smartCallsign !== null && String(smartCallsign).trim() !== "") {
           try {

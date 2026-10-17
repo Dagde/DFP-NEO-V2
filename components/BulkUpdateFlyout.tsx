@@ -45,6 +45,10 @@ interface BulkUpdateFlyoutProps {
   configuredLocations?: PlatformLocation[] | any[];
 }
 
+const normaliseImportHeader = (value: unknown): string => (
+    String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '')
+);
+
 // Helper to get a value from a row with fuzzy key matching
 const getValueFromRow = (row: any, possibleKeys: string[]): any => {
     const rowKeys = Object.keys(row);
@@ -52,11 +56,12 @@ const getValueFromRow = (row: any, possibleKeys: string[]): any => {
         // Try exact match first (case-sensitive)
         if (row[key] !== undefined) return row[key];
     }
-    // Then try case-insensitive, space-insensitive match
+    // Then compare normalised headings so template guidance in brackets/new lines
+    // does not prevent a column from being imported.
     for (const key of possibleKeys) {
-        const lowerKey = key.toLowerCase().replace(/[\s/]/g, '');
+        const lowerKey = normaliseImportHeader(key);
         for (const rowKey of rowKeys) {
-            if (rowKey.toLowerCase().replace(/[\s/]/g, '') === lowerKey) {
+            if (normaliseImportHeader(rowKey) === lowerKey) {
                 return row[rowKey];
             }
         }
@@ -73,8 +78,8 @@ const hasAnyHeader = (row: any, possibleKeys: string[]): boolean => {
     const rowKeys = Object.keys(row);
     return possibleKeys.some(key => {
         if (row[key] !== undefined) return true;
-        const lowerKey = key.toLowerCase().replace(/[\s/]/g, '');
-        return rowKeys.some(rowKey => rowKey.toLowerCase().replace(/[\s/]/g, '') === lowerKey);
+        const lowerKey = normaliseImportHeader(key);
+        return rowKeys.some(rowKey => normaliseImportHeader(rowKey) === lowerKey);
     });
 };
 
@@ -365,7 +370,13 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                     if (fallbackUnit) parsedData.unit = fallbackUnit;
                 }
 
-                const smartCallsign = getValueFromRow(row, ['Callsign', 'Call Sign']);
+                const smartCallsign = getValueFromRow(row, [
+                    'Callsign',
+                    'Call Sign',
+                    'Callsign Number or Prefix Number',
+                    'Callsign [number or prefix + number]',
+                    'Primary Callsign',
+                ]);
                 const callsignNumber = getValueFromRow(row, ['callsign number', 'callsignnumber', 'Callsign No', 'Callsign Number']);
                 if (smartCallsign !== undefined && smartCallsign !== null && String(smartCallsign).trim() !== '') {
                     try {

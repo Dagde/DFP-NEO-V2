@@ -13414,6 +13414,9 @@ const InitialSetupWizard: React.FC<{
             const qualificationIds = getResolvedStaffQualificationIds(row);
             const hasExplicitQualificationAssignment = rowHasExplicitQualificationAssignment(row);
             const flags = qualificationsToFlags(String(row.qualifications || ''), qualificationIds);
+            const importedCallsign = String(row.callsign || '').trim().toUpperCase();
+            const importedCallsignNumber = Number(row.callsignNumber)
+                || Number(importedCallsign.match(/(\d{1,3})$/)?.[1] || 0);
             return {
                 id: `setup-staff-${index + 1}`,
                 idNumber: normaliseWizardPersonnelId(row),
@@ -13422,9 +13425,9 @@ const InitialSetupWizard: React.FC<{
                 role: row.position || row.role || 'Instructor',
                 category: row.category || 'B',
                 service: row.service || '',
-                callsign: row.callsign || '',
+                callsign: importedCallsign,
                 secondaryCallsign: row.secondaryCallsign || '',
-                callsignNumber: Number(row.callsignNumber) || index + 1,
+                callsignNumber: importedCallsignNumber,
                 isTestingOfficer: false,
                 seatConfig: row.seatConfig || 'ANY',
                 isExecutive: false,
