@@ -4348,11 +4348,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   };
 
   const priorityEventGroupStyles: Record<'tasking' | 'currency' | 'trainee-currency' | 'special' | 'remedial', string> = {
-    tasking: 'bg-cyan-900 text-cyan-50',
-    currency: 'bg-indigo-900 text-indigo-50',
-    'trainee-currency': 'bg-violet-900 text-violet-50',
-    special: 'bg-fuchsia-900 text-fuchsia-50',
-    remedial: 'bg-amber-900 text-amber-50',
+    tasking: 'bg-emerald-600 text-white',
+    currency: 'bg-emerald-700 text-white',
+    special: 'bg-emerald-800 text-white',
+    'trainee-currency': 'bg-emerald-900 text-white',
+    remedial: 'bg-emerald-950 text-white',
   };
 
   const renderStandardMissionTile = (
