@@ -1786,6 +1786,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   // Bulk Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadExampleRowChoice, setUploadExampleRowChoice] = useState<'skip' | 'import' | null>(null);
   const [isUploadDragActive, setIsUploadDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMode, setUploadMode] = useState<'update' | 'replace' | 'create'>('update');
@@ -2734,6 +2735,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   const openUploadModal = () => {
       setUploadFile(null);
+      setUploadExampleRowChoice(null);
       setUploadResult(null);
       setUploadProgress(null);
       setUploadReview(null);
@@ -2895,6 +2897,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   const handleBulkUpload = async () => {
       if (!uploadFile) { await showDarkAlert('Please select a file first.', 'No File Selected', 'warning'); return; }
+      if (!uploadExampleRowChoice) {
+          await showDarkAlert('Choose whether row 2 contains sample data before reviewing the upload.', 'Sample Row Choice Required', 'warning');
+          return;
+      }
       const isMasterUpload = !isTrainingPackagesTab;
       if (isMasterUpload && !masterUploadIntent) {
           await showDarkAlert('Choose whether this is a new LMP or an update to an existing LMP first.', 'Upload Type Required', 'warning');
@@ -2968,6 +2974,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           formData.append('courseCode', destinationCode);
           formData.append('packageName', destinationName);
           formData.append('uploadMode', isMasterUpload ? (masterUploadIntent === 'new' ? 'create' : 'replace') : uploadMode);
+          formData.append('skipExampleRow', uploadExampleRowChoice === 'skip' ? 'true' : 'false');
           if (isMasterUpload) {
               formData.append('uploadIntent', masterUploadIntent || '');
               formData.append('lmpVersion', uploadLmpVersion.trim() || DEFAULT_LMP_VERSION);
@@ -3093,6 +3100,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                       activeOperationalModel,
                       activeLocationNormalised,
                       activeUnitNormalised,
+                      uploadExampleRowChoice,
                       file: uploadFile ? { name: uploadFile.name, size: uploadFile.size, type: uploadFile.type } : null,
                   },
                   review: uploadReview,
@@ -4463,6 +4471,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         event.stopPropagation();
                         setIsUploadDragActive(false);
                         setUploadFile(event.dataTransfer.files?.[0] || null);
+                        setUploadExampleRowChoice(null);
                         setUploadResult(null);
                         setUploadProgress(null);
                         setUploadReview(null);
@@ -4484,7 +4493,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     <input
                         type="file"
                         accept=".xlsx,.xls,.csv"
-                        onChange={e => { setUploadFile(e.target.files?.[0] || null); setUploadResult(null); setUploadProgress(null); setUploadReview(null); setShowUploadOneByOneReview(false); setShowUploadFinalWarning(false); }}
+                        onChange={e => { setUploadFile(e.target.files?.[0] || null); setUploadExampleRowChoice(null); setUploadResult(null); setUploadProgress(null); setUploadReview(null); setShowUploadOneByOneReview(false); setShowUploadFinalWarning(false); }}
                         style={{ display: 'block', width: '100%', fontSize: 13, color: '#f9fafb',
                             backgroundColor: '#111827', border: '1px solid #374151', borderRadius: 6, padding: '8px 12px' }}
                     />
@@ -4492,9 +4501,39 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 </div>
 
                 {uploadFile && !uploadResult && (
-                    <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
-                        Selected: <strong style={{ color: '#d1d5db' }}>{uploadFile.name}</strong> ({(uploadFile.size / 1024).toFixed(1)} KB)
-                    </p>
+                    <>
+                        <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
+                            Selected: <strong style={{ color: '#d1d5db' }}>{uploadFile.name}</strong> ({(uploadFile.size / 1024).toFixed(1)} KB)
+                        </p>
+                        <fieldset style={{ marginBottom: 16, padding: 12, border: '1px solid rgba(251, 191, 36, 0.45)', borderRadius: 8, backgroundColor: 'rgba(120, 53, 15, 0.22)' }}>
+                            <legend style={{ padding: '0 4px', fontSize: 12, fontWeight: 700, color: '#fde68a' }}>
+                                Does row 2 contain sample data?
+                            </legend>
+                            <p style={{ margin: '2px 0 10px', fontSize: 11, color: '#fef3c7', lineHeight: 1.45 }}>
+                                Choose whether the first row below the headers should be ignored or imported as an LMP event.
+                            </p>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8, fontSize: 12, color: '#f9fafb', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="lmp-example-row-choice"
+                                    checked={uploadExampleRowChoice === 'skip'}
+                                    onChange={() => { setUploadExampleRowChoice('skip'); setUploadReview(null); setUploadResult(null); setShowUploadOneByOneReview(false); setShowUploadFinalWarning(false); }}
+                                    style={{ accentColor: '#f59e0b' }}
+                                />
+                                Yes, ignore row 2 as a sample row
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12, color: '#f9fafb', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="lmp-example-row-choice"
+                                    checked={uploadExampleRowChoice === 'import'}
+                                    onChange={() => { setUploadExampleRowChoice('import'); setUploadReview(null); setUploadResult(null); setShowUploadOneByOneReview(false); setShowUploadFinalWarning(false); }}
+                                    style={{ accentColor: '#f59e0b' }}
+                                />
+                                No, import every populated row
+                            </label>
+                        </fieldset>
+                    </>
                 )}
 
                 {uploadReview?.preview && !uploadResult && (
@@ -4506,6 +4545,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                             <div><strong style={{ color: '#fff' }}>Target:</strong> {uploadReview.preview.destinationName || uploadReview.preview.destinationCode}</div>
                             <div><strong style={{ color: '#fff' }}>Version:</strong> {uploadReview.preview.lmpVersion || uploadLmpVersion || 'N/A'}</div>
                             <div><strong style={{ color: '#fff' }}>Uploaded events:</strong> {uploadReview.preview.uploadedEventRows}</div>
+                            <div><strong style={{ color: '#fff' }}>Sample row:</strong> {uploadReview.preview.skippedExampleRow ? 'Row 2 ignored' : 'Row 2 imported'}</div>
                             <div><strong style={{ color: '#fff' }}>Existing Master rows:</strong> {uploadReview.preview.existingMasterRows}</div>
                             <div><strong style={{ color: '#fff' }}>Assigned trainees:</strong> {uploadReview.preview.assignedTrainees}</div>
                             <div><strong style={{ color: '#fff' }}>Completed events protected:</strong> {uploadReview.preview.protectedCompletedEvents}</div>
@@ -4767,6 +4807,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                             onClick={handleBulkUpload}
                             disabled={
                                 !uploadFile
+                                || !uploadExampleRowChoice
                                 || isUploading
                                 || (isTrainingPackagesTab && uploadMode === 'create' && !newUploadPackageName.trim())
                                 || (!isTrainingPackagesTab && masterUploadIntent === 'new' && !newUploadPackageName.trim())

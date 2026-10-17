@@ -100317,6 +100317,7 @@ const SyllabusView = ({
   const [deletePasswordVerified, setDeletePasswordVerified] = reactExports.useState(false);
   const [showUploadModal, setShowUploadModal] = reactExports.useState(false);
   const [uploadFile, setUploadFile] = reactExports.useState(null);
+  const [uploadExampleRowChoice, setUploadExampleRowChoice] = reactExports.useState(null);
   const [isUploadDragActive, setIsUploadDragActive] = reactExports.useState(false);
   const [isUploading, setIsUploading] = reactExports.useState(false);
   const [uploadMode, setUploadMode] = reactExports.useState("update");
@@ -101131,6 +101132,7 @@ const SyllabusView = ({
   };
   const openUploadModal = () => {
     setUploadFile(null);
+    setUploadExampleRowChoice(null);
     setUploadResult(null);
     setUploadProgress(null);
     setUploadReview(null);
@@ -101284,6 +101286,10 @@ const SyllabusView = ({
       await showDarkAlert("Please select a file first.", "No File Selected", "warning");
       return;
     }
+    if (!uploadExampleRowChoice) {
+      await showDarkAlert("Choose whether row 2 contains sample data before reviewing the upload.", "Sample Row Choice Required", "warning");
+      return;
+    }
     const isMasterUpload = !isTrainingPackagesTab;
     if (isMasterUpload && !masterUploadIntent) {
       await showDarkAlert("Choose whether this is a new LMP or an update to an existing LMP first.", "Upload Type Required", "warning");
@@ -101347,6 +101353,7 @@ const SyllabusView = ({
       formData.append("courseCode", destinationCode);
       formData.append("packageName", destinationName);
       formData.append("uploadMode", isMasterUpload ? masterUploadIntent === "new" ? "create" : "replace" : uploadMode);
+      formData.append("skipExampleRow", uploadExampleRowChoice === "skip" ? "true" : "false");
       if (isMasterUpload) {
         formData.append("uploadIntent", masterUploadIntent || "");
         formData.append("lmpVersion", uploadLmpVersion.trim() || DEFAULT_LMP_VERSION);
@@ -101467,6 +101474,7 @@ const SyllabusView = ({
             activeOperationalModel,
             activeLocationNormalised,
             activeUnitNormalised,
+            uploadExampleRowChoice,
             file: uploadFile ? { name: uploadFile.name, size: uploadFile.size, type: uploadFile.type } : null
           },
           review: uploadReview
@@ -103036,6 +103044,7 @@ const SyllabusView = ({
                       event.stopPropagation();
                       setIsUploadDragActive(false);
                       setUploadFile(event.dataTransfer.files?.[0] || null);
+                      setUploadExampleRowChoice(null);
                       setUploadResult(null);
                       setUploadProgress(null);
                       setUploadReview(null);
@@ -103066,6 +103075,7 @@ const SyllabusView = ({
                           accept: ".xlsx,.xls,.csv",
                           onChange: (e) => {
                             setUploadFile(e.target.files?.[0] || null);
+                            setUploadExampleRowChoice(null);
                             setUploadResult(null);
                             setUploadProgress(null);
                             setUploadReview(null);
@@ -103088,12 +103098,56 @@ const SyllabusView = ({
                     ]
                   }
                 ),
-                uploadFile && !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 12, color: "#6b7280", marginBottom: 12 }, children: [
-                  "Selected: ",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: uploadFile.name }),
-                  " (",
-                  (uploadFile.size / 1024).toFixed(1),
-                  " KB)"
+                uploadFile && !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 12, color: "#6b7280", marginBottom: 12 }, children: [
+                    "Selected: ",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: uploadFile.name }),
+                    " (",
+                    (uploadFile.size / 1024).toFixed(1),
+                    " KB)"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { style: { marginBottom: 16, padding: 12, border: "1px solid rgba(251, 191, 36, 0.45)", borderRadius: 8, backgroundColor: "rgba(120, 53, 15, 0.22)" }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { style: { padding: "0 4px", fontSize: 12, fontWeight: 700, color: "#fde68a" }, children: "Does row 2 contain sample data?" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { margin: "2px 0 10px", fontSize: 11, color: "#fef3c7", lineHeight: 1.45 }, children: "Choose whether the first row below the headers should be ignored or imported as an LMP event." }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { display: "flex", alignItems: "center", gap: 9, marginBottom: 8, fontSize: 12, color: "#f9fafb", cursor: "pointer" }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "lmp-example-row-choice",
+                          checked: uploadExampleRowChoice === "skip",
+                          onChange: () => {
+                            setUploadExampleRowChoice("skip");
+                            setUploadReview(null);
+                            setUploadResult(null);
+                            setShowUploadOneByOneReview(false);
+                            setShowUploadFinalWarning(false);
+                          },
+                          style: { accentColor: "#f59e0b" }
+                        }
+                      ),
+                      "Yes, ignore row 2 as a sample row"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { display: "flex", alignItems: "center", gap: 9, fontSize: 12, color: "#f9fafb", cursor: "pointer" }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "lmp-example-row-choice",
+                          checked: uploadExampleRowChoice === "import",
+                          onChange: () => {
+                            setUploadExampleRowChoice("import");
+                            setUploadReview(null);
+                            setUploadResult(null);
+                            setShowUploadOneByOneReview(false);
+                            setShowUploadFinalWarning(false);
+                          },
+                          style: { accentColor: "#f59e0b" }
+                        }
+                      ),
+                      "No, import every populated row"
+                    ] })
+                  ] })
                 ] }),
                 uploadReview?.preview && !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16, padding: 12, backgroundColor: "#082f49", border: "1px solid #0e7490", borderRadius: 8 }, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 13, fontWeight: 700, color: "#bae6fd", marginBottom: 8 }, children: "Review before import" }),
@@ -103112,6 +103166,11 @@ const SyllabusView = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Uploaded events:" }),
                       " ",
                       uploadReview.preview.uploadedEventRows
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Sample row:" }),
+                      " ",
+                      uploadReview.preview.skippedExampleRow ? "Row 2 ignored" : "Row 2 imported"
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Existing Master rows:" }),
@@ -103380,7 +103439,7 @@ const SyllabusView = ({
                     "button",
                     {
                       onClick: handleBulkUpload,
-                      disabled: !uploadFile || isUploading || isTrainingPackagesTab && uploadMode === "create" && !newUploadPackageName.trim() || !isTrainingPackagesTab && masterUploadIntent === "new" && !newUploadPackageName.trim() || !isTrainingPackagesTab && masterUploadIntent === "update" && !uploadTargetLmpCode,
+                      disabled: !uploadFile || !uploadExampleRowChoice || isUploading || isTrainingPackagesTab && uploadMode === "create" && !newUploadPackageName.trim() || !isTrainingPackagesTab && masterUploadIntent === "new" && !newUploadPackageName.trim() || !isTrainingPackagesTab && masterUploadIntent === "update" && !uploadTargetLmpCode,
                       style: {
                         padding: "8px 20px",
                         fontSize: 12,

@@ -10151,7 +10151,7 @@ function getUploadEventCodePreferenceRank(value) {
   return cleanValue === getUploadEventDuplicateKey(cleanValue) ? 2 : 1;
 }
 
-function buildUploadDuplicateDecisionForRows(rows) {
+function buildUploadDuplicateDecisionForRows(rows, rowNumberOffset = 0) {
   const candidatesByKey = new Map();
   rows.forEach((row, index) => {
     if (!uploadRowHasEventContent(row)) return;
@@ -10161,7 +10161,7 @@ function buildUploadDuplicateDecisionForRows(rows) {
     const candidates = candidatesByKey.get(duplicateKey) || [];
     candidates.push({
       index,
-      row: index + 2,
+      row: index + 2 + rowNumberOffset,
       eventCode: String(eventCode).trim(),
       preferenceRank: getUploadEventCodePreferenceRank(eventCode),
     });
@@ -10378,6 +10378,7 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
     const dryRun = String(req.body?.dryRun || '').trim() === 'true';
     const lmpVersion = String(req.body?.lmpVersion || '').trim();
     const updateReviewMode = String(req.body?.updateReviewMode || 'automatic').trim();
+    const skipExampleRow = String(req.body?.skipExampleRow || '').trim().toLowerCase() === 'true';
     const lmpType = normaliseUploadLmpType(String(req.body?.lmpType || 'Master LMP').trim());
     const operationalModel = String(req.body?.operationalModel || '').trim();
     const locationCode = String(req.body?.locationCode || req.body?.location || '').trim();
@@ -10453,10 +10454,12 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
     }
 
     const worksheet = workbook.Sheets[worksheetName];
-    const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+    const workbookRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+    const rowNumberOffset = skipExampleRow ? 1 : 0;
+    const rows = skipExampleRow ? workbookRows.slice(1) : workbookRows;
     const uploadDuplicateDecision = lmpType === 'Staff CAT'
       ? { skipByIndex: new Map() }
-      : buildUploadDuplicateDecisionForRows(rows);
+      : buildUploadDuplicateDecisionForRows(rows, rowNumberOffset);
     updateSyllabusUploadProgress(uploadOperationId, {
       phase: 'workbook:parsed',
       message: `Workbook parsed. Scanning ${rows.length} row${rows.length === 1 ? '' : 's'}...`,
@@ -10480,13 +10483,17 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
         operationalModel,
         locationCode,
         unitCode,
+        skipExampleRow,
       },
       workbook: {
         fileName: req.file.originalname || '',
         fileSize: req.file.size || req.file.buffer?.length || 0,
         sheetNames: workbook.SheetNames,
         worksheetName,
-        rawRows: rows.length,
+        rawRows: workbookRows.length,
+        importedRows: rows.length,
+        skippedExampleRow: skipExampleRow,
+        exampleRowNumber: 2,
       },
       rowScan: {
         eventRows: 0,
@@ -10513,10 +10520,18 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
       },
       stages: [],
     };
+    if (skipExampleRow && workbookRows.length > 0) {
+      uploadTrace.rowScan.ignoredRows = 1;
+      uploadTrace.rowScan.ignoredRowSamples.push({
+        row: 2,
+        reason: 'First data row ignored by explicit sample-row selection.',
+        values: Object.values(workbookRows[0]).filter(value => String(value || '').trim()).slice(0, 8),
+      });
+    }
     uploadTrace.stages.push({ stage: 'workbook:parsed', at: new Date().toISOString() });
     for (let index = 0; index < rows.length; index++) {
       const row = rows[index];
-      const rowNumber = index + 2;
+      const rowNumber = index + 2 + rowNumberOffset;
       if (!uploadRowHasEventContent(row)) {
         if (uploadRowHasContent(row)) {
           uploadTrace.rowScan.ignoredRows += 1;
@@ -10601,7 +10616,7 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
       let contentRows = 0;
       for (let index = 0; index < rows.length; index++) {
         const row = rows[index];
-        const rowNumber = index + 2;
+        const rowNumber = index + 2 + rowNumberOffset;
         if (!uploadRowHasEventContent(row)) continue;
         if (uploadDuplicateDecision.skipByIndex.has(index)) continue;
         contentRows += 1;
@@ -10706,6 +10721,7 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
           protectedCompletedEvents: null,
           fileName: req.file.originalname || '',
           lmpVersion: lmpVersion || null,
+          skippedExampleRow: skipExampleRow,
         },
         uploadTrace,
       });
@@ -10762,7 +10778,7 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
 
     for (let index = 0; index < rows.length; index++) {
       const row = rows[index];
-      const rowNumber = index + 2;
+      const rowNumber = index + 2 + rowNumberOffset;
       if (!uploadRowHasEventContent(row)) continue;
       if (uploadDuplicateDecision.skipByIndex.has(index)) continue;
 
