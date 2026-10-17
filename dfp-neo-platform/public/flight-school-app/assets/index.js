@@ -62083,15 +62083,16 @@ const parseImportedCallsign = (rawValue, unitCode, unitCallsignSettings) => {
     callsign: `${prefix}${String(callsignNumber).padStart(3, "0")}`
   };
 };
+const normaliseImportHeader = (value) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 const getValueFromRow$1 = (row, possibleKeys) => {
   for (const key of possibleKeys) {
     if (row[key] !== void 0) return row[key];
   }
   const rowKeys = Object.keys(row);
   for (const key of possibleKeys) {
-    const normalisedKey = key.toLowerCase().replace(/[\s/]/g, "");
+    const normalisedKey = normaliseImportHeader(key);
     for (const rowKey of rowKeys) {
-      if (rowKey.toLowerCase().replace(/[\s/]/g, "") === normalisedKey) {
+      if (normaliseImportHeader(rowKey) === normalisedKey) {
         return row[rowKey];
       }
     }
@@ -62137,6 +62138,7 @@ const parseTraineeRow = (row, options = {}) => {
   const nameField = getStr(row, [
     "Name\n [Surname, Firstname]",
     "Name [Surname, Firstname]",
+    "Name (Surname, FirstName)",
     "Name",
     "Full Name",
     "FullName"
@@ -62232,8 +62234,8 @@ const readWorkbookRows = async (file, skipExampleRow = false) => {
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
   const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
   const headerRowIndex = rawRows.findIndex((row) => {
-    const cells = row.map((cell) => String(cell || "").trim().toLowerCase().replace(/[\s/]/g, ""));
-    const hasName = cells.some((cell) => ["name", "fullname", "name[surname,firstname]", "name[surname,firstname]"].includes(cell));
+    const cells = row.map(normaliseImportHeader);
+    const hasName = cells.some((cell) => ["name", "fullname", "namesurnamefirstname"].includes(cell));
     const hasId = cells.some((cell) => ["personnelid", "serviceid", "employeeid", "employeenumber", "personnelnumber", "staffid", "id", "idnumber"].includes(cell));
     const hasCourse = cells.includes("course") || cells.some((cell) => cell.startsWith("coursenumber")) || cells.includes("courseprefix") && cells.includes("coursenumber");
     return hasName && hasId && hasCourse;
