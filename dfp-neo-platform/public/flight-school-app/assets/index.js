@@ -81527,11 +81527,11 @@ const PrioritiesView = ({
     return "currency";
   };
   const priorityEventGroupStyles = {
-    tasking: "bg-emerald-600 text-white",
-    currency: "bg-emerald-700 text-white",
-    special: "bg-emerald-800 text-white",
-    "trainee-currency": "bg-emerald-900 text-white",
-    remedial: "bg-emerald-950 text-white"
+    tasking: "bg-emerald-600/30 text-white",
+    currency: "bg-emerald-600/45 text-white",
+    special: "bg-emerald-600/60 text-white",
+    "trainee-currency": "bg-emerald-600/75 text-white",
+    remedial: "bg-emerald-600/90 text-white"
   };
   const renderStandardMissionTile = (label, value, className = "") => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-h-[104px] rounded-lg border border-slate-700 bg-slate-950/80 p-3 ${className}`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500", children: label }),
