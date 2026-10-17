@@ -18048,7 +18048,7 @@ function ArrowTopRightOnSquareIcon({
     d: "M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
   }));
 }
-const ForwardRef$c = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
+const ForwardRef$d = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
 function ChartBarIcon({
   title,
   titleId,
@@ -18072,7 +18072,31 @@ function ChartBarIcon({
     d: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
   }));
 }
-const ForwardRef$b = /* @__PURE__ */ reactExports.forwardRef(ChartBarIcon);
+const ForwardRef$c = /* @__PURE__ */ reactExports.forwardRef(ChartBarIcon);
+function CheckIcon$1({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "m4.5 12.75 6 6 9-13.5"
+  }));
+}
+const ForwardRef$b = /* @__PURE__ */ reactExports.forwardRef(CheckIcon$1);
 function ClockIcon({
   title,
   titleId,
@@ -78555,7 +78579,8 @@ const getTaskProfileSuggestions = (value, taskProfiles) => {
 };
 const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpenDirectedTaskLists, onChange }) => {
   const [isOpen, setIsOpen] = reactExports.useState(false);
-  const suggestions = getTaskProfileSuggestions(value, taskProfiles);
+  const [isFiltering, setIsFiltering] = reactExports.useState(false);
+  const suggestions = getTaskProfileSuggestions(isFiltering ? value : "", taskProfiles);
   const configuredProfileCount = taskProfiles.filter((profile) => String(profile || "").trim()).length;
   const showSuggestions = isOpen;
   const settingsPathText = "Settings → Organisation & Operations → Directed Task Lists";
@@ -78567,6 +78592,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
         event.preventDefault();
         event.stopPropagation();
         setIsOpen(false);
+        setIsFiltering(false);
         onOpenDirectedTaskLists();
       },
       className: "mt-3 flex w-full items-center gap-3 rounded-md border border-cyan-400/50 bg-cyan-500/10 px-3 py-2 text-left text-cyan-50 transition hover:border-cyan-300 hover:bg-cyan-500/20 focus:outline-none focus:ring-2 focus:ring-cyan-400/70",
@@ -78582,6 +78608,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
   const selectProfile = (profile) => {
     onChange(profile);
     setIsOpen(false);
+    setIsFiltering(false);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
@@ -78595,11 +78622,15 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
           role: "combobox",
           "aria-expanded": showSuggestions,
           "aria-autocomplete": "list",
-          onFocus: () => setIsOpen(true),
+          onFocus: () => {
+            setIsOpen(true);
+            setIsFiltering(false);
+          },
           onBlur: () => setIsOpen(false),
           onChange: (event) => {
             onChange(event.target.value);
             setIsOpen(true);
+            setIsFiltering(true);
           },
           placeholder: "Directed task",
           className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 py-2 pl-9 pr-3 text-sm font-semibold text-white outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
@@ -78614,27 +78645,36 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
           " configured"
         ] })
       ] }),
-      suggestions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-64 space-y-1 overflow-y-auto p-1.5", role: "listbox", children: suggestions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "button",
-        {
-          type: "button",
-          role: "option",
-          "aria-selected": value.trim() === profile,
-          onMouseDown: (event) => {
-            event.preventDefault();
-            selectProfile(profile);
+      suggestions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-64 space-y-1 overflow-y-auto p-1.5", role: "listbox", children: suggestions.map((profile) => {
+        const isSelected = profile.trim().toLocaleLowerCase() === value.trim().toLocaleLowerCase();
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            role: "option",
+            "aria-selected": isSelected,
+            onMouseDown: (event) => {
+              event.preventDefault();
+              selectProfile(profile);
+            },
+            className: `block w-full rounded-md border px-3 py-2 text-left transition hover:border-cyan-400/45 hover:bg-cyan-500/15 focus:border-cyan-400/60 focus:bg-cyan-500/15 focus:outline-none ${isSelected ? "border-cyan-400/35 bg-cyan-500/10" : "border-transparent bg-slate-900/70"}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-cyan-50", children: profile }),
+                isSelected && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex shrink-0 items-center gap-1 rounded border border-cyan-400/25 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-cyan-200", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-3 w-3", "aria-hidden": "true" }),
+                  "Selected"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block whitespace-normal break-words text-[10px] leading-tight text-slate-400", children: [
+                operationalModelLabel,
+                " directed task"
+              ] })
+            ]
           },
-          className: "block w-full rounded-md border border-transparent bg-slate-900/70 px-3 py-2 text-left transition hover:border-cyan-400/45 hover:bg-cyan-500/15 focus:border-cyan-400/60 focus:bg-cyan-500/15 focus:outline-none",
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-bold text-cyan-50", children: profile }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block whitespace-normal break-words text-[10px] leading-tight text-slate-400", children: [
-              operationalModelLabel,
-              " directed task"
-            ] })
-          ]
-        },
-        profile
-      )) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 text-left", children: [
+          profile
+        );
+      }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 text-left", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-amber-400/35 bg-amber-500/10 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-bold text-amber-100", children: configuredProfileCount > 0 ? "No saved task matches this text" : "No directed task names configured" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs leading-relaxed text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter a one-off task, or add this name to the saved list in Settings." : `${operationalModelLabel} has no saved directed task names. Add reusable names in Settings, or type a one-off task here.` })
@@ -89582,7 +89622,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "flight",
       title: "Flight events per day",
       subtitle: "Scheduled flying events counted from published DFP snapshots.",
-      icon: ForwardRef$b,
+      icon: ForwardRef$c,
       color: "border-blue-400/40 bg-blue-400/10 text-blue-200",
       series: flightPoints,
       summary: compactNumber(valueSum(flightPoints)),
@@ -89974,7 +90014,7 @@ const AircraftUnserviceabilityTile = ({ summary, loading, onOpen }) => /* @__PUR
     children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-orange-300/40 bg-orange-300/10 text-orange-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef, { className: "h-8 w-8 opacity-75" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: "Aircraft unserviceability" }),
@@ -90150,7 +90190,7 @@ const MetricTile = ({ metric, onOpen, cancellationCategories }) => {
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex h-14 w-14 items-center justify-center rounded-lg border ${metric.color}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Icon, { className: "h-8 w-8" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: metric.title }),
@@ -90265,8 +90305,8 @@ const CourseOutcomeTile = ({ data, onOpen }) => {
       className: "group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400",
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-violet-400/40 bg-violet-400/10 text-violet-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-8 w-8 opacity-60" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-violet-400/40 bg-violet-400/10 text-violet-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-8 w-8 opacity-60" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: "Course status comparison" }),
@@ -90435,8 +90475,8 @@ const CoursePassRateTile = ({ data, selectedLmp, date, onOpen }) => {
       className: "group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400",
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-8 w-8 opacity-60" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-8 w-8 opacity-60" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: "Unit pass rates" }),

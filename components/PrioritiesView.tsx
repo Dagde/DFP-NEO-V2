@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Cog6ToothIcon, MagnifyingGlassIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, Cog6ToothIcon, MagnifyingGlassIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest, FlyingWindowExclusionPeriod, FlyingWindowExclusionRestriction, CrewRequirement, StandardMissionProfile, type FormationCallsign } from '../types';
 import UnavailabilitiesWindow from './UnavailabilitiesWindow';
 import AuditButton from './AuditButton';
@@ -641,7 +641,8 @@ const TaskingProfileInput: React.FC<{
   onChange: (value: string) => void;
 }> = ({ value, taskProfiles, operationalModelLabel, onOpenDirectedTaskLists, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const suggestions = getTaskProfileSuggestions(value, taskProfiles);
+  const [isFiltering, setIsFiltering] = useState(false);
+  const suggestions = getTaskProfileSuggestions(isFiltering ? value : '', taskProfiles);
   const configuredProfileCount = taskProfiles.filter((profile) => String(profile || '').trim()).length;
   const showSuggestions = isOpen;
   const settingsPathText = 'Settings → Organisation & Operations → Directed Task Lists';
@@ -652,6 +653,7 @@ const TaskingProfileInput: React.FC<{
         event.preventDefault();
         event.stopPropagation();
         setIsOpen(false);
+        setIsFiltering(false);
         onOpenDirectedTaskLists();
       }}
       className="mt-3 flex w-full items-center gap-3 rounded-md border border-cyan-400/50 bg-cyan-500/10 px-3 py-2 text-left text-cyan-50 transition hover:border-cyan-300 hover:bg-cyan-500/20 focus:outline-none focus:ring-2 focus:ring-cyan-400/70"
@@ -669,6 +671,7 @@ const TaskingProfileInput: React.FC<{
   const selectProfile = (profile: string) => {
     onChange(profile);
     setIsOpen(false);
+    setIsFiltering(false);
   };
 
   return (
@@ -682,11 +685,15 @@ const TaskingProfileInput: React.FC<{
           role="combobox"
           aria-expanded={showSuggestions}
           aria-autocomplete="list"
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setIsOpen(true);
+            setIsFiltering(false);
+          }}
           onBlur={() => setIsOpen(false)}
           onChange={(event) => {
             onChange(event.target.value);
             setIsOpen(true);
+            setIsFiltering(true);
           }}
           placeholder="Directed task"
           className="h-10 w-full rounded-md border border-slate-600 bg-slate-800 py-2 pl-9 pr-3 text-sm font-semibold text-white outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40"
@@ -702,24 +709,35 @@ const TaskingProfileInput: React.FC<{
           </div>
           {suggestions.length > 0 ? (
             <div className="max-h-64 space-y-1 overflow-y-auto p-1.5" role="listbox">
-              {suggestions.map((profile) => (
-                <button
-                  key={profile}
-                  type="button"
-                  role="option"
-                  aria-selected={value.trim() === profile}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    selectProfile(profile);
-                  }}
-                  className="block w-full rounded-md border border-transparent bg-slate-900/70 px-3 py-2 text-left transition hover:border-cyan-400/45 hover:bg-cyan-500/15 focus:border-cyan-400/60 focus:bg-cyan-500/15 focus:outline-none"
-                >
-                  <span className="block text-sm font-bold text-cyan-50">{profile}</span>
-                  <span className="mt-0.5 block whitespace-normal break-words text-[10px] leading-tight text-slate-400">
-                    {operationalModelLabel} directed task
-                  </span>
-                </button>
-              ))}
+              {suggestions.map((profile) => {
+                const isSelected = profile.trim().toLocaleLowerCase() === value.trim().toLocaleLowerCase();
+                return (
+                  <button
+                    key={profile}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      selectProfile(profile);
+                    }}
+                    className={`block w-full rounded-md border px-3 py-2 text-left transition hover:border-cyan-400/45 hover:bg-cyan-500/15 focus:border-cyan-400/60 focus:bg-cyan-500/15 focus:outline-none ${isSelected ? 'border-cyan-400/35 bg-cyan-500/10' : 'border-transparent bg-slate-900/70'}`}
+                  >
+                    <span className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-bold text-cyan-50">{profile}</span>
+                      {isSelected && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded border border-cyan-400/25 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-cyan-200">
+                          <CheckIcon className="h-3 w-3" aria-hidden="true" />
+                          Selected
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 block whitespace-normal break-words text-[10px] leading-tight text-slate-400">
+                      {operationalModelLabel} directed task
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <div className="p-3 text-left">
