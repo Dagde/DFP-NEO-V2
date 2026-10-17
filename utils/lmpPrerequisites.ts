@@ -1,7 +1,7 @@
 import type { SyllabusItemDetail } from '../types';
 
 export const normaliseLmpPrerequisiteKey = (value?: string | null): string => (
-  String(value || '').replace(/\*/g, '').trim()
+  String(value || '').replace(/\*/g, '').trim().toUpperCase()
 );
 
 export const getAllLmpPrerequisiteKeys = (item?: Partial<SyllabusItemDetail> | null): string[] => {

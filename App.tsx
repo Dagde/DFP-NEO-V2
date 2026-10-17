@@ -10394,7 +10394,8 @@ const computeNextEventsForTrainee = (
     let plusOneEvt: SyllabusItemDetail | null = null;
     let nextEventIndex = -1;
 
-    // Find Next Event
+    // LMP order is authoritative. A blocked event remains the trainee's next
+    // event; do not leapfrog it to find an unrelated later event.
     for (let i = 0; i < individualLMP.length; i++) {
         const item = individualLMP[i];
         if (isCompletedLmpItem(item, completedEventIds)) {
@@ -10430,18 +10431,31 @@ const computeNextEventsForTrainee = (
                 unmetPrerequisites,
             });
         }
+        diagnostic.reason = 'NEXT_EVENT_BLOCKED_BY_PREREQUISITES';
+        break;
     }
 
-    // Find Next +1 Event (sequentially)
+    // Find Next +1 sequentially, treating the selected Next event as completed
+    // for prerequisite evaluation. This permits a genuine follow-on event but
+    // prevents Next +1 from jumping over another blocked LMP row.
     if (nextEventIndex !== -1) {
+        const projectedCompletedEventIds = new Set(completedEventIds);
+        addLmpCompletionAlias(projectedCompletedEventIds, nextEvt?.id);
+        addLmpCompletionAlias(projectedCompletedEventIds, nextEvt?.code);
+        addLmpCompletionAlias(projectedCompletedEventIds, nextEvt?.masterEventId);
+
         for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
             const item = individualLMP[i];
-            // Skip non-schedulable events
-            if (!shouldSkipLegacyMassBriefInNextEventSelection(item, groundEventSchedulingSettings) && !isCompletedLmpItem(item, completedEventIds)) {
-                plusOneEvt = item;
-                diagnostic.selectedPlusOne = item.code || item.id || null;
-                break;
-            }
+            if (isCompletedLmpItem(item, completedEventIds)) continue;
+            if (shouldSkipLegacyMassBriefInNextEventSelection(item, groundEventSchedulingSettings)) continue;
+
+            const prerequisites = getAllLmpPrerequisiteKeys(item);
+            const unmetPrerequisites = prerequisites.filter(prerequisite => !projectedCompletedEventIds.has(prerequisite));
+            if (unmetPrerequisites.length > 0) break;
+
+            plusOneEvt = item;
+            diagnostic.selectedPlusOne = item.code || item.id || null;
+            break;
         }
     }
 
