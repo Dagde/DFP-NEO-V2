@@ -16,6 +16,7 @@ export type CourseUploadPreview = {
 
 interface CourseSelectionFlyoutProps {
   courses: string[];
+  acceptedUploadValuesByCourse?: Record<string, string[]>;
   onConfirm: (selectedCourse: string) => void | Promise<void>;
   onClose: () => void;
   updateType: 'bulk' | 'minor';
@@ -28,27 +29,29 @@ const CourseSelectionFlyout: React.FC<CourseSelectionFlyoutProps> = ({
   onClose,
   updateType,
   uploadPreview,
+  acceptedUploadValuesByCourse = {},
 }) => {
     const [selectedCourse, setSelectedCourse] = useState<string>('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const uploadedCourses = uploadPreview?.courses?.filter(Boolean) || [];
+    const acceptedUploadValues = new Set(
+        [selectedCourse, ...(acceptedUploadValuesByCourse[selectedCourse] || [])]
+            .map(value => String(value || '').trim().toUpperCase())
+            .filter(Boolean)
+    );
     const hasCourseMismatch = Boolean(
         selectedCourse &&
         uploadedCourses.length > 0 &&
-        !uploadedCourses.includes(selectedCourse)
+        uploadedCourses.some(uploadedCourse => !acceptedUploadValues.has(String(uploadedCourse).trim().toUpperCase()))
     );
     const hasNoValidRows = Boolean(uploadPreview && uploadPreview.validRowCount === 0);
-    const disableSubmit = isSubmitting || hasCourseMismatch || hasNoValidRows;
+    const disableSubmit = isSubmitting || hasNoValidRows;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedCourse) {
             setError('Please select a course.');
-            return;
-        }
-        if (hasCourseMismatch) {
-            setError(`This file contains ${uploadedCourses.join(', ')}, but ${selectedCourse} is selected.`);
             return;
         }
         setIsSubmitting(true);
@@ -147,7 +150,7 @@ const CourseSelectionFlyout: React.FC<CourseSelectionFlyoutProps> = ({
                     )}
                     {hasCourseMismatch && (
                         <div className="rounded-md border border-amber-600 bg-amber-950/30 p-3 text-xs text-amber-200">
-                            The selected course does not match the course values parsed from this file. Select {uploadedCourses.join(', ')} or choose a corrected spreadsheet.
+                            The spreadsheet course/LMP value is {uploadedCourses.join(', ')}. The trainees will be added to roster {selectedCourse}, and the spreadsheet value will be retained as their LMP assignment.
                         </div>
                     )}
                     {hasNoValidRows && (

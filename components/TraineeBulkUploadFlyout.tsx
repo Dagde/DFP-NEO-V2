@@ -300,6 +300,26 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         }
         return Array.from(courseNames).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
     }, [activeCourses, coursesFromFile]);
+    const acceptedUploadValuesByCourse = useMemo(() => {
+        const aliases: Record<string, string[]> = {};
+        selectableCourses.forEach(courseName => {
+            const normalisedCourseName = String(courseName || '').trim().toUpperCase();
+            const courseRecord = courses.find(course => (
+                [course.name, course.code, course.number]
+                    .map(value => String(value || '').trim().toUpperCase())
+                    .filter(Boolean)
+                    .includes(normalisedCourseName)
+            ));
+            aliases[courseName] = Array.from(new Set([
+                courseRecord?.name,
+                courseRecord?.code,
+                courseRecord?.number,
+                courseRecord?.lmpType,
+                courseRecord?.academicLmpType,
+            ].map(value => String(value || '').trim()).filter(Boolean)));
+        });
+        return aliases;
+    }, [courses, selectableCourses]);
     const canIssueAccountActivations = ['ADMIN', 'SUPER_ADMIN'].includes(String(currentUserRole || '').trim().toUpperCase().replace(/[\s-]+/g, '_'));
 
 
@@ -466,15 +486,39 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         }));
         const validRows = parsedRows.filter((trainee): trainee is Partial<Trainee> => Boolean(trainee && trainee.idNumber && trainee.name));
         const skipped = rows.length - validRows.length;
-        const uploadedCourses = Array.from(new Set(validRows.map(trainee => String(trainee.course || '').trim()).filter(Boolean)));
-        const mismatchedCourses = uploadedCourses.filter(uploadedCourse => uploadedCourse !== course);
-        if (mismatchedCourses.length > 0) {
-            throw new Error(
-                `This file contains trainee rows for ${mismatchedCourses.join(', ')}, but you selected ${course}. ` +
-                `The upload has been stopped so trainees are not moved into the wrong course. Select ${mismatchedCourses[0]} or use a file whose Course column is ${course}.`
-            );
-        }
-        const newTrainees = validRows.map(trainee => ({ ...trainee, uploadedCourse: trainee.course || '', course, fullName: `${trainee.name} – ${course}` } as Trainee & { uploadedCourse?: string }));
+        const acceptedUploadValues = new Set(
+            [course, ...(acceptedUploadValuesByCourse[course] || [])]
+                .map(value => String(value || '').trim().toUpperCase())
+                .filter(Boolean)
+        );
+        const selectedCourseRecord = courses.find(candidate => (
+            [candidate.name, candidate.code, candidate.number]
+                .map(value => String(value || '').trim().toUpperCase())
+                .filter(Boolean)
+                .includes(course.trim().toUpperCase())
+        ));
+        const newTrainees = validRows.map(trainee => {
+            const uploadedCourse = String(trainee.course || '').trim();
+            const uploadedCourseKey = uploadedCourse.toUpperCase();
+            const configuredLmpType = String(selectedCourseRecord?.lmpType || '').trim();
+            const configuredAcademicLmpType = String(selectedCourseRecord?.academicLmpType || '').trim();
+            const uploadedValueIsRosterIdentifier = acceptedUploadValues.has(uploadedCourseKey)
+                && uploadedCourseKey !== configuredLmpType.toUpperCase()
+                && uploadedCourseKey !== configuredAcademicLmpType.toUpperCase();
+            return {
+                ...trainee,
+                uploadedCourse,
+                course,
+                lmpType: trainee.lmpType
+                    || (configuredLmpType.toUpperCase() === uploadedCourseKey ? uploadedCourse : configuredLmpType)
+                    || (!uploadedValueIsRosterIdentifier ? uploadedCourse : '')
+                    || undefined,
+                academicLmpType: trainee.academicLmpType
+                    || (configuredAcademicLmpType.toUpperCase() === uploadedCourseKey ? uploadedCourse : configuredAcademicLmpType)
+                    || undefined,
+                fullName: `${trainee.name} – ${course}`,
+            } as Trainee & { uploadedCourse?: string };
+        });
         const activationRequested = issueAccountActivations && canIssueAccountActivations;
 
         if (activationRequested) {
@@ -608,6 +652,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
             {showCourseSelection && (
                 <CourseSelectionFlyout
                     courses={selectableCourses}
+                    acceptedUploadValuesByCourse={acceptedUploadValuesByCourse}
                     updateType={updateType}
                     onConfirm={processRows}
                     onClose={() => setShowCourseSelection(false)}

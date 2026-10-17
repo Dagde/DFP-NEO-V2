@@ -61801,25 +61801,25 @@ const CourseSelectionFlyout = ({
   onConfirm,
   onClose,
   updateType,
-  uploadPreview
+  uploadPreview,
+  acceptedUploadValuesByCourse = {}
 }) => {
   const [selectedCourse, setSelectedCourse] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
   const [isSubmitting, setIsSubmitting] = reactExports.useState(false);
   const uploadedCourses = uploadPreview?.courses?.filter(Boolean) || [];
+  const acceptedUploadValues = new Set(
+    [selectedCourse, ...acceptedUploadValuesByCourse[selectedCourse] || []].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean)
+  );
   const hasCourseMismatch = Boolean(
-    selectedCourse && uploadedCourses.length > 0 && !uploadedCourses.includes(selectedCourse)
+    selectedCourse && uploadedCourses.length > 0 && uploadedCourses.some((uploadedCourse) => !acceptedUploadValues.has(String(uploadedCourse).trim().toUpperCase()))
   );
   const hasNoValidRows = Boolean(uploadPreview && uploadPreview.validRowCount === 0);
-  const disableSubmit = isSubmitting || hasCourseMismatch || hasNoValidRows;
+  const disableSubmit = isSubmitting || hasNoValidRows;
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedCourse) {
       setError("Please select a course.");
-      return;
-    }
-    if (hasCourseMismatch) {
-      setError(`This file contains ${uploadedCourses.join(", ")}, but ${selectedCourse} is selected.`);
       return;
     }
     setIsSubmitting(true);
@@ -61897,9 +61897,11 @@ const CourseSelectionFlyout = ({
         ] })
       ] }) }),
       hasCourseMismatch && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-amber-600 bg-amber-950/30 p-3 text-xs text-amber-200", children: [
-        "The selected course does not match the course values parsed from this file. Select ",
+        "The spreadsheet course/LMP value is ",
         uploadedCourses.join(", "),
-        " or choose a corrected spreadsheet."
+        ". The trainees will be added to roster ",
+        selectedCourse,
+        ", and the spreadsheet value will be retained as their LMP assignment."
       ] }),
       hasNoValidRows && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-red-700 bg-red-950/30 p-3 text-xs text-red-200", children: "No valid trainee rows were found. Each uploaded trainee must have a Personnel ID and name before the course can be updated." })
     ] }),
@@ -62322,6 +62324,21 @@ const TraineeBulkUploadFlyout = ({
     }
     return Array.from(courseNames).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
   }, [activeCourses, coursesFromFile]);
+  const acceptedUploadValuesByCourse = reactExports.useMemo(() => {
+    const aliases = {};
+    selectableCourses.forEach((courseName) => {
+      const normalisedCourseName = String(courseName || "").trim().toUpperCase();
+      const courseRecord = courses.find((course) => [course.name, course.code, course.number].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean).includes(normalisedCourseName));
+      aliases[courseName] = Array.from(new Set([
+        courseRecord?.name,
+        courseRecord?.code,
+        courseRecord?.number,
+        courseRecord?.lmpType,
+        courseRecord?.academicLmpType
+      ].map((value) => String(value || "").trim()).filter(Boolean)));
+    });
+    return aliases;
+  }, [courses, selectableCourses]);
   const canIssueAccountActivations = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole2 || "").trim().toUpperCase().replace(/[\s-]+/g, "_"));
   const handleFile = (selectedFile) => {
     if (!selectedFile) return;
@@ -62470,14 +62487,25 @@ const TraineeBulkUploadFlyout = ({
     }));
     const validRows = parsedRows.filter((trainee) => Boolean(trainee && trainee.idNumber && trainee.name));
     const skipped = rows.length - validRows.length;
-    const uploadedCourses = Array.from(new Set(validRows.map((trainee) => String(trainee.course || "").trim()).filter(Boolean)));
-    const mismatchedCourses = uploadedCourses.filter((uploadedCourse) => uploadedCourse !== course);
-    if (mismatchedCourses.length > 0) {
-      throw new Error(
-        `This file contains trainee rows for ${mismatchedCourses.join(", ")}, but you selected ${course}. The upload has been stopped so trainees are not moved into the wrong course. Select ${mismatchedCourses[0]} or use a file whose Course column is ${course}.`
-      );
-    }
-    const newTrainees = validRows.map((trainee) => ({ ...trainee, uploadedCourse: trainee.course || "", course, fullName: `${trainee.name} – ${course}` }));
+    const acceptedUploadValues = new Set(
+      [course, ...acceptedUploadValuesByCourse[course] || []].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean)
+    );
+    const selectedCourseRecord = courses.find((candidate) => [candidate.name, candidate.code, candidate.number].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean).includes(course.trim().toUpperCase()));
+    const newTrainees = validRows.map((trainee) => {
+      const uploadedCourse = String(trainee.course || "").trim();
+      const uploadedCourseKey = uploadedCourse.toUpperCase();
+      const configuredLmpType = String(selectedCourseRecord?.lmpType || "").trim();
+      const configuredAcademicLmpType = String(selectedCourseRecord?.academicLmpType || "").trim();
+      const uploadedValueIsRosterIdentifier = acceptedUploadValues.has(uploadedCourseKey) && uploadedCourseKey !== configuredLmpType.toUpperCase() && uploadedCourseKey !== configuredAcademicLmpType.toUpperCase();
+      return {
+        ...trainee,
+        uploadedCourse,
+        course,
+        lmpType: trainee.lmpType || (configuredLmpType.toUpperCase() === uploadedCourseKey ? uploadedCourse : configuredLmpType) || (!uploadedValueIsRosterIdentifier ? uploadedCourse : "") || void 0,
+        academicLmpType: trainee.academicLmpType || (configuredAcademicLmpType.toUpperCase() === uploadedCourseKey ? uploadedCourse : configuredAcademicLmpType) || void 0,
+        fullName: `${trainee.name} – ${course}`
+      };
+    });
     const activationRequested = issueAccountActivations && canIssueAccountActivations;
     if (activationRequested) {
       const missingEmail = newTrainees.filter((trainee) => !String(trainee.email || "").trim());
@@ -62607,6 +62635,7 @@ const TraineeBulkUploadFlyout = ({
       CourseSelectionFlyout,
       {
         courses: selectableCourses,
+        acceptedUploadValuesByCourse,
         updateType,
         onConfirm: processRows,
         onClose: () => setShowCourseSelection(false),
