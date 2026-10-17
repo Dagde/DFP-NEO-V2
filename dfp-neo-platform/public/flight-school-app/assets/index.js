@@ -62096,9 +62096,6 @@ const parseImportedCallsign = (rawValue, unitCode, unitCallsignSettings) => {
   if (normalisedDefaultPrefix && prefix !== normalisedDefaultPrefix) {
     throw new Error(`Callsign "${raw}" uses prefix ${prefix}, but unit ${unitCode || "(blank)"} is configured for ${normalisedDefaultPrefix}.`);
   }
-  if (!normalisedDefaultPrefix) {
-    throw new Error(`Callsign "${raw}" includes prefix ${prefix}, but unit ${unitCode || "(blank)"} has no default callsign prefix configured to validate against.`);
-  }
   const callsignNumber = Number(numberText);
   return {
     callsignNumber,
