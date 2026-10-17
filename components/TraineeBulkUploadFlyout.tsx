@@ -239,14 +239,8 @@ const readWorkbookRows = async (file: File, skipExampleRow = false): Promise<Wor
         throw new Error('No valid trainee header row was found. The file must include Name, Personnel ID or ID Number, and Course columns.');
     }
     const exampleRowDetection = detectStyledExampleRow(worksheet, headerRowIndex + 1, rawRows[headerRowIndex].length, workbook);
-    if (exampleRowDetection.hasExampleCandidate && !exampleRowDetection.isStyledExampleRow) {
-        throw new Error(
-            `Row ${exampleRowDetection.rowNumber} contains data but does not match the expected example-row styling. ` +
-            'Use the official template example row styling, or remove row 2 before importing real trainee data.'
-        );
-    }
     return {
-        records: buildRowRecords(rawRows, headerRowIndex, skipExampleRow && exampleRowDetection.isStyledExampleRow),
+        records: buildRowRecords(rawRows, headerRowIndex, skipExampleRow),
         exampleRowDetection,
     };
 };
@@ -379,10 +373,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         if (!file) return;
         try {
             const { records: rowRecords, exampleRowDetection: detectedExampleRow } = await readWorkbookRows(file, Boolean(options?.skipExampleRow));
-            if (detectedExampleRow.isStyledExampleRow && !options?.skipExampleRow) {
-                setExampleRowDetection(detectedExampleRow);
-                return `Confirm row ${detectedExampleRow.rowNumber} is an example row before importing.`;
-            }
+            setExampleRowDetection(detectedExampleRow);
             const airfieldCatalogue = await loadImportAirfieldCatalogue();
             const preview = buildUploadPreview(file, rowRecords, airfieldCatalogue);
             setRows(rowRecords);
@@ -610,7 +601,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
                     fileName={file.name}
                     onConfirm={handleConfirm}
                     onClose={() => setShowConfirm(false)}
-                    requiresExampleRowConfirmation={Boolean(exampleRowDetection?.isStyledExampleRow)}
+                    requiresExampleRowChoice
                     exampleRowNumber={exampleRowDetection?.rowNumber || 2}
                 />
             )}

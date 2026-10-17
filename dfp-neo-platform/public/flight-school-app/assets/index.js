@@ -61648,12 +61648,12 @@ const UpdateConfirmationFlyout = ({
   fileName,
   onConfirm,
   onClose,
-  requiresExampleRowConfirmation = false,
+  requiresExampleRowChoice = false,
   exampleRowNumber = 2
 }) => {
   const passwordInputRef = reactExports.useRef(null);
   const [updateType, setUpdateType] = reactExports.useState("minor");
-  const [exampleRowConfirmed, setExampleRowConfirmed] = reactExports.useState(false);
+  const [exampleRowChoice, setExampleRowChoice] = reactExports.useState(null);
   const [error, setError] = reactExports.useState("");
   const [isSubmitting, setIsSubmitting] = reactExports.useState(false);
   const handleSubmit = async (e) => {
@@ -61663,13 +61663,13 @@ const UpdateConfirmationFlyout = ({
       setError("Enter your password.");
       return;
     }
-    if (requiresExampleRowConfirmation && !exampleRowConfirmed) {
-      setError(`Confirm row ${exampleRowNumber} is an example row before importing.`);
+    if (requiresExampleRowChoice && !exampleRowChoice) {
+      setError(`Choose whether row ${exampleRowNumber} is a sample row before importing.`);
       return;
     }
     setIsSubmitting(true);
     try {
-      const result = await onConfirm(password, updateType, { skipExampleRow: requiresExampleRowConfirmation && exampleRowConfirmed });
+      const result = await onConfirm(password, updateType, { skipExampleRow: requiresExampleRowChoice && exampleRowChoice === "skip" });
       if (typeof result === "string" && result.trim()) {
         setError(result);
       }
@@ -61702,29 +61702,49 @@ const UpdateConfirmationFlyout = ({
         ),
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 text-sm text-center mt-1", children: error })
       ] }),
-      requiresExampleRowConfirmation && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-3 rounded-md border border-amber-400/40 bg-amber-950/30 p-3 text-sm text-amber-100", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            type: "checkbox",
-            checked: exampleRowConfirmed,
-            onChange: (event) => {
-              setExampleRowConfirmed(event.target.checked);
-              if (error) setError("");
-            },
-            className: "mt-1 h-4 w-4 rounded border-amber-300 bg-gray-900 text-amber-500 focus:ring-amber-500"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block font-semibold text-amber-200", children: [
-            "Row ",
-            exampleRowNumber,
-            " is an example row only"
+      requiresExampleRowChoice && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "rounded-md border border-amber-400/40 bg-amber-950/30 p-3 text-sm text-amber-100", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("legend", { className: "px-1 font-semibold text-amber-200", children: [
+          "Does row ",
+          exampleRowNumber,
+          " contain sample data?"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-3 mt-1 text-xs text-amber-100/80", children: "Choose whether the first row below the headers should be ignored or imported." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "radio",
+                name: "example-row-choice",
+                checked: exampleRowChoice === "skip",
+                onChange: () => {
+                  setExampleRowChoice("skip");
+                  if (error) setError("");
+                },
+                className: "h-4 w-4 accent-amber-500"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              "Yes, ignore row ",
+              exampleRowNumber,
+              " as a sample row"
+            ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-1 block text-xs text-amber-100/80", children: [
-            "The importer detected the expected italic and colour-different example styling. Tick this to skip row ",
-            exampleRowNumber,
-            "; it will not be imported."
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "radio",
+                name: "example-row-choice",
+                checked: exampleRowChoice === "import",
+                onChange: () => {
+                  setExampleRowChoice("import");
+                  if (error) setError("");
+                },
+                className: "h-4 w-4 accent-amber-500"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "No, import every populated row" })
           ] })
         ] })
       ] }),
@@ -62244,13 +62264,8 @@ const readWorkbookRows = async (file, skipExampleRow = false) => {
     throw new Error("No valid trainee header row was found. The file must include Name, Personnel ID or ID Number, and Course columns.");
   }
   const exampleRowDetection = detectStyledExampleRow(worksheet, headerRowIndex + 1, rawRows[headerRowIndex].length, workbook);
-  if (exampleRowDetection.hasExampleCandidate && !exampleRowDetection.isStyledExampleRow) {
-    throw new Error(
-      `Row ${exampleRowDetection.rowNumber} contains data but does not match the expected example-row styling. Use the official template example row styling, or remove row 2 before importing real trainee data.`
-    );
-  }
   return {
-    records: buildRowRecords(rawRows, headerRowIndex, skipExampleRow && exampleRowDetection.isStyledExampleRow),
+    records: buildRowRecords(rawRows, headerRowIndex, skipExampleRow),
     exampleRowDetection
   };
 };
@@ -62376,10 +62391,7 @@ const TraineeBulkUploadFlyout = ({
     if (!file) return;
     try {
       const { records: rowRecords, exampleRowDetection: detectedExampleRow } = await readWorkbookRows(file, Boolean(options?.skipExampleRow));
-      if (detectedExampleRow.isStyledExampleRow && !options?.skipExampleRow) {
-        setExampleRowDetection(detectedExampleRow);
-        return `Confirm row ${detectedExampleRow.rowNumber} is an example row before importing.`;
-      }
+      setExampleRowDetection(detectedExampleRow);
       const airfieldCatalogue = await loadImportAirfieldCatalogue();
       const preview = buildUploadPreview(file, rowRecords, airfieldCatalogue);
       setRows(rowRecords);
@@ -62588,7 +62600,7 @@ const TraineeBulkUploadFlyout = ({
         fileName: file.name,
         onConfirm: handleConfirm,
         onClose: () => setShowConfirm(false),
-        requiresExampleRowConfirmation: Boolean(exampleRowDetection?.isStyledExampleRow),
+        requiresExampleRowChoice: true,
         exampleRowNumber: exampleRowDetection?.rowNumber || 2
       }
     ),

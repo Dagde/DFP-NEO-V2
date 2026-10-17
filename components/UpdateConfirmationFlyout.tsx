@@ -4,7 +4,7 @@ interface UpdateConfirmationFlyoutProps {
   fileName: string;
   onConfirm: (password: string, updateType: 'bulk' | 'minor', options?: { skipExampleRow: boolean }) => Promise<string | void> | string | void;
   onClose: () => void;
-  requiresExampleRowConfirmation?: boolean;
+  requiresExampleRowChoice?: boolean;
   exampleRowNumber?: number;
 }
 
@@ -12,12 +12,12 @@ const UpdateConfirmationFlyout: React.FC<UpdateConfirmationFlyoutProps> = ({
     fileName,
     onConfirm,
     onClose,
-    requiresExampleRowConfirmation = false,
+    requiresExampleRowChoice = false,
     exampleRowNumber = 2,
 }) => {
     const passwordInputRef = useRef<HTMLInputElement | null>(null);
     const [updateType, setUpdateType] = useState<'bulk' | 'minor'>('minor');
-    const [exampleRowConfirmed, setExampleRowConfirmed] = useState(false);
+    const [exampleRowChoice, setExampleRowChoice] = useState<'skip' | 'import' | null>(null);
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -28,13 +28,13 @@ const UpdateConfirmationFlyout: React.FC<UpdateConfirmationFlyoutProps> = ({
             setError('Enter your password.');
             return;
         }
-        if (requiresExampleRowConfirmation && !exampleRowConfirmed) {
-            setError(`Confirm row ${exampleRowNumber} is an example row before importing.`);
+        if (requiresExampleRowChoice && !exampleRowChoice) {
+            setError(`Choose whether row ${exampleRowNumber} is a sample row before importing.`);
             return;
         }
         setIsSubmitting(true);
         try {
-            const result = await onConfirm(password, updateType, { skipExampleRow: requiresExampleRowConfirmation && exampleRowConfirmed });
+            const result = await onConfirm(password, updateType, { skipExampleRow: requiresExampleRowChoice && exampleRowChoice === 'skip' });
             if (typeof result === 'string' && result.trim()) {
                 setError(result);
             }
@@ -69,24 +69,39 @@ const UpdateConfirmationFlyout: React.FC<UpdateConfirmationFlyoutProps> = ({
                          {error && <p className="text-red-400 text-sm text-center mt-1">{error}</p>}
                     </div>
 
-                    {requiresExampleRowConfirmation && (
-                        <label className="flex items-start gap-3 rounded-md border border-amber-400/40 bg-amber-950/30 p-3 text-sm text-amber-100">
-                            <input
-                                type="checkbox"
-                                checked={exampleRowConfirmed}
-                                onChange={event => {
-                                    setExampleRowConfirmed(event.target.checked);
-                                    if (error) setError('');
-                                }}
-                                className="mt-1 h-4 w-4 rounded border-amber-300 bg-gray-900 text-amber-500 focus:ring-amber-500"
-                            />
-                            <span>
-                                <span className="block font-semibold text-amber-200">Row {exampleRowNumber} is an example row only</span>
-                                <span className="mt-1 block text-xs text-amber-100/80">
-                                    The importer detected the expected italic and colour-different example styling. Tick this to skip row {exampleRowNumber}; it will not be imported.
-                                </span>
-                            </span>
-                        </label>
+                    {requiresExampleRowChoice && (
+                        <fieldset className="rounded-md border border-amber-400/40 bg-amber-950/30 p-3 text-sm text-amber-100">
+                            <legend className="px-1 font-semibold text-amber-200">Does row {exampleRowNumber} contain sample data?</legend>
+                            <p className="mb-3 mt-1 text-xs text-amber-100/80">Choose whether the first row below the headers should be ignored or imported.</p>
+                            <div className="space-y-2">
+                                <label className="flex cursor-pointer items-center gap-3">
+                                    <input
+                                        type="radio"
+                                        name="example-row-choice"
+                                        checked={exampleRowChoice === 'skip'}
+                                        onChange={() => {
+                                            setExampleRowChoice('skip');
+                                            if (error) setError('');
+                                        }}
+                                        className="h-4 w-4 accent-amber-500"
+                                    />
+                                    <span>Yes, ignore row {exampleRowNumber} as a sample row</span>
+                                </label>
+                                <label className="flex cursor-pointer items-center gap-3">
+                                    <input
+                                        type="radio"
+                                        name="example-row-choice"
+                                        checked={exampleRowChoice === 'import'}
+                                        onChange={() => {
+                                            setExampleRowChoice('import');
+                                            if (error) setError('');
+                                        }}
+                                        className="h-4 w-4 accent-amber-500"
+                                    />
+                                    <span>No, import every populated row</span>
+                                </label>
+                            </div>
+                        </fieldset>
                     )}
                     
                     <fieldset>
